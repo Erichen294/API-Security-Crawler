@@ -74,9 +74,43 @@ def test_alias_attack():
     except Exception as e:
         print("[-] Alias-based attack test failed:", e)
 
+def test_sensitive_data():
+    sensitive_fields = [
+        'email',
+        'password',
+        'creditCardNumber',
+    ]
+
+    print("Running sensitive data test...")
+    try:
+        for field in sensitive_fields:
+            sensitive_query = {
+                'query': f'''
+                {{
+                    search(query: "{field}") {{
+                        id
+                        {field}
+                    }}
+                }}
+                '''
+            }
+            response = requests.post(GRAPHQL_URL, json=sensitive_query)
+            response.raise_for_status()
+            response_json = response.json()
+
+            if 'data' in response_json and 'search' in response_json['data']:
+                print(f"[!] Sensitive data leak detected in field: {field}")
+                print("Evidence:", json.dumps(response_json, indent=4))
+            else:
+                print(f"[-] No sensitive data leak detected in field: {field}")
+    except Exception as e:
+        print("Error during sensitive data test:", e)
+
+
 if __name__ == "__main__":
     url = GRAPHQL_URL
-    check_resource_request(url)
     print("Running test cases...")
+    check_resource_request(url)
     test_dos_attack()
     test_alias_attack()
+    test_sensitive_data()
