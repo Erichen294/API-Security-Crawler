@@ -4,6 +4,12 @@ import json
 # Define the GraphQL endpoint URL
 GRAPHQL_URL = "http://localhost:5013/graphql"
 
+def print_red(text):
+    print("\033[91m{}\033[0m".format(text))
+
+def print_green(text):
+    print("\033[92m{}\033[0m".format(text))
+
 def check_resource_request(url):
     resource_query = {
         'query': '''{
@@ -29,10 +35,10 @@ def check_resource_request(url):
         response_json = response.json()
 
         if 'data' in response_json and '__type' in response_json['data']:
-            print("[!] Excessive resource request vulnerability found at", url)
+            print_red("[!] Excessive resource request vulnerability found at {}".format(url))
             print("Evidence:", json.dumps(response_json, indent=4))
         else:
-            print("[-] No excessive resource request vulnerability found at", url)
+            print_green("[-] No excessive resource request vulnerability found at {}".format(url))
     except Exception as e:
         print("Error during resource request check:", e)
 
@@ -44,13 +50,13 @@ def test_dos_attack():
         for i in range(100):  
             response = requests.post(GRAPHQL_URL, json={"query": query})
             status_codes.append(response.status_code)
-        print("[+] DoS attack test status codes:", status_codes)
+        print_green("[+] DoS attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
-            print("[+] DoS attack test successful.")
+            print_green("[+] DoS attack test successful.")
         else:
-            print("[-] DoS attack test failed: Server responded with 200 status code.")
+            print_red("[-] DoS attack test failed: Server responded with 200 status code.")
     except Exception as e:
-        print("[-] DoS attack test failed:", e)
+        print_red("[-] DoS attack test failed: {}".format(e))
 
 def test_alias_attack():
     query_list = []
@@ -65,14 +71,14 @@ def test_alias_attack():
         for i in range(100):  
             response = requests.post(GRAPHQL_URL, json={"query": query})
             status_codes.append(response.status_code)
-        print("[+] Alias-based attack test status codes:", status_codes)
+        print_green("[+] Alias-based attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
-            print("[+] Alias-based attack test successful.")
+            print_green("[+] Alias-based attack test successful.")
         else:
-            print("[-] Alias-based attack test failed: Server responded with 200 status code.")
+            print_red("[-] Alias-based attack test failed: Server responded with 200 status code.")
 
     except Exception as e:
-        print("[-] Alias-based attack test failed:", e)
+        print_red("[-] Alias-based attack test failed: {}".format(e))
 
 def test_sensitive_data():
     sensitive_fields = [
@@ -99,10 +105,10 @@ def test_sensitive_data():
             response_json = response.json()
 
             if 'data' in response_json and 'search' in response_json['data']:
-                print(f"[!] Sensitive data leak detected in field: {field}")
+                print_red("[!] Sensitive data leak detected in field: {}".format(field))
                 print("Evidence:", json.dumps(response_json, indent=4))
             else:
-                print(f"[-] No sensitive data leak detected in field: {field}")
+                print_green("[-] No sensitive data leak detected in field: {}".format(field))
     except Exception as e:
         print("Error during sensitive data test:", e)
 
