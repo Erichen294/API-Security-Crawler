@@ -1,9 +1,9 @@
-import requests
+import subprocess
 import json
-import graphviz
+import requests
 
 def fetch_graphql_schema(url):
-    # Define the GraphQL introspection query
+    """Fetches the GraphQL schema via an introspection query."""
     introspection_query = {
         "query": """query IntrospectionQuery {
           __schema {
@@ -92,9 +92,10 @@ def fetch_graphql_schema(url):
               }
             }
           }
-        }"""
+        }
+        """
     }
-    
+
     headers = {"Content-Type": "application/json"}
     response = requests.post(url, json=introspection_query, headers=headers)
     
@@ -104,55 +105,29 @@ def fetch_graphql_schema(url):
         print(f"Failed to fetch schema, status code: {response.status_code}")
         return None
 
-def print_graphql_type_tables(schema_data):
-    # Iterate over all types in the schema
-    for graphql_type in schema_data.get('__schema', {}).get('types', []):
-        if graphql_type['name'].startswith('__'):
-            continue
-        
-        print(f"{graphql_type['name']}")
-        print('=' * len(graphql_type['name']))
-        
-        # Check if the type has fields (OBJECT, INTERFACE)
-        fields = graphql_type.get('fields')
-        if fields:
-            for field in fields:
-                field_name = field['name']
-                field_type = get_field_type(field['type'])
-                args = [arg['name'] for arg in field.get('args', [])]
-                args_str = ', '.join(args) if args else 'No arguments'
-                print(f"{field_name} ({field_type}) - {args_str}")
-        else:
-            print('No fields')
-        
-        print()  
-
-def get_field_type(field_type):
-    # Recursively get the name of the type (OBJECT, SCALAR, ENUM, etc.)
-    if field_type.get('ofType'):
-        return get_field_type(field_type.get('ofType'))
-    else:
-        return field_type.get('name')
-    
 def save_schema_to_file(schema, filename):
+    """Saves the schema to a file."""
     with open(filename, 'w') as file:
         json.dump(schema, file, indent=2)
 
-def load_schema_from_file(filename):
-    with open(filename, 'r') as file:
-        return json.load(file)
+def execute_graphqlviz(schema_file, output_file):
+    """Executes the graphqlviz command to generate a PNG image from a schema file."""
+    command = f"graphqlviz {schema_file} --theme.header.invert=true | dot -Tpng > {output_file}"
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+
+    if process.returncode == 0:
+        print("Graph generated successfully.")
+    else:
+        print(f"Error generating graph: {stderr.decode()}")
 
 if __name__ == "__main__":
     url = input("Enter the GraphQL endpoint URL: ")
+    schema_filename = input("Enter filename to save the schema JSON (e.g., schema.json): ")
+    output_image_file = input("Enter output image file name (e.g., schema.png): ")
     schema = fetch_graphql_schema(url)
     if schema:
-        schema_file = "schema.json"  
-        save_schema_to_file(schema, schema_file)
-        
-        schema_data = load_schema_from_file(schema_file)
-        
-        print_graphql_type_tables(schema_data['data'])
-
-        print("The GraphQL schema types have been printed.")
+        save_schema_to_file(schema, schema_filename)
+        execute_graphqlviz(schema_filename, output_image_file)
     else:
         print("Failed to fetch or validate the GraphQL schema.")
