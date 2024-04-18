@@ -24,6 +24,16 @@ graphql_paths = [
     '/query',
     '/index.php?graphql',
     '/rpc/graphql',
+    '/api/v1/graphql',
+    '/services/graphql',
+    '/data/graphql',
+    '/gql/api',
+    '/dev/graphql',
+    '/gql/query',
+    '/api/data/graphql',
+    '/services/gql',
+    '/admin/graphql',
+    '/secure/graphql',
 
     # Version 1 specific paths
     '/v1/altair',
