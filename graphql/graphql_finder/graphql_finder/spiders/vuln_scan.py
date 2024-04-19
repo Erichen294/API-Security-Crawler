@@ -3,7 +3,7 @@ import json
 import json
 
 
-# GRAPHQL_URL = "http://localhost:5013/graphiql"
+# GRAPHQL_URL = "http://localhost:5013/graphql"
 
 # Define the GraphQL endpoint URL
 def load_endpoints(filename):
@@ -224,33 +224,58 @@ def test_permissions():
 
 
 def test_introspection():
-    introspection_query = """
-    query {
-      __schema {
-        queryType { name }
-        mutationType { name }
-        types {
-          name
+    introspection_query = {
+        "query": """
+        query IntrospectionQuery {
+            __schema {
+                queryType { name }
+                mutationType { name }
+                subscriptionType { name }
+                types {
+                    name
+                }
+                directives {
+                    name
+                }
+            }
         }
-      }
+        """
     }
-    """
     headers = {'Content-Type': 'application/json'}
-    payload = {'query': introspection_query}
-
     print("Running introspection test...")
-    response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
-    if 'types' in response.text:
-        print_red("[-] Introspection is enabled and could leak sensitive schema information.")
-    else:
-        print_green("[+] Introspection is properly restricted.")
+    try:
+        response = requests.post(GRAPHQL_URL, json=introspection_query, headers=headers)
+        response.raise_for_status()  
+        data = response.json()
+        if data.get('data', {}).get('__schema'):
+            print_red("[-] Introspection is enabled and could leak sensitive schema information.")
+        else:
+            print_green("[+] Introspection is properly restricted.")
+    except requests.exceptions.HTTPError as err:
+        print_red(f"HTTP error occurred: {err}")
+    except requests.exceptions.RequestException as e:
+        print_red(f"An error occurred during the request: {e}")
+    except ValueError:
+        print_red("Failed to decode JSON from response.")
 
 
 if __name__ == "__main__":
-    endpoints = load_endpoints("valid_endpoints.json")
+    choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
+    
+    if choice == 'manual':
+        # Single endpoint provided by the user
+        GRAPHQL_URL = input("Enter the GraphQL endpoint URL: ")
+        endpoints = [GRAPHQL_URL]  
+    elif choice == 'json':
+        filename = input("Enter the filename containing endpoints (e.g., valid_endpoints.json): ")
+        endpoints = load_endpoints(filename)
+    else:
+        print("Invalid choice. Exiting.")
+        exit()
+
     for url in endpoints:
-        GRAPHQL_URL = url
         print(f"Running test cases on {url}...")
+        test_introspection()
         check_resource_request(url)
         test_dos_attack()
         test_alias_attack()
@@ -260,5 +285,3 @@ if __name__ == "__main__":
         test_sql_injection()
         test_path_traversal()
         test_permissions()
-        test_introspection()
-        
