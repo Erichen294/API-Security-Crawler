@@ -177,6 +177,75 @@ def test_sql_injection():
         print_red(f"Failed to send SQL injection test request: {e}")
 
 
+def test_path_traversal():
+    path_traversal_query = """
+    mutation {
+      uploadPaste(filename:"../../../../../tmp/file.txt", content:"hi"){
+        result
+      }
+    }
+    """
+    headers = {'Content-Type': 'application/json'}
+    payload = {'query': path_traversal_query}
+
+    try:
+        print("Running path traversal test...")
+        response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+        if response.status_code == 200:
+            response_data = response.json()
+            if response_data.get('data') and response_data['data']['uploadPaste']['result']:
+                print_red("[!] Path traversal attack may be possible.")
+                print("Response data:", response_data)
+            else:
+                print_green("[-] Path traversal test did not execute successfully, status code: {response.status_code}")
+        else:
+            print_green(f"[-] Path traversal test failed with status code: {response.status_code}")
+    except Exception as e:
+        print_red(f"Failed to send path traversal test request: {e}")
+
+
+def test_permissions():
+    sensitive_query = """
+    mutation {
+      deleteUser(userId: "12345") {
+        result
+      }
+    }
+    """
+    headers = {'Content-Type': 'application/json'}
+    payload = {'query': sensitive_query}
+
+    print("Running permissions test...")
+    response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+    if response.status_code == 403 or response.status_code == 401:
+        print_green("[+] Proper authorization checks are in place.")
+    else:
+        print_red("[-] Permissions test failed, unauthorized actions might be possible.")
+
+
+def test_introspection():
+    introspection_query = """
+    query {
+      __schema {
+        queryType { name }
+        mutationType { name }
+        types {
+          name
+        }
+      }
+    }
+    """
+    headers = {'Content-Type': 'application/json'}
+    payload = {'query': introspection_query}
+
+    print("Running introspection test...")
+    response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+    if 'types' in response.text:
+        print_red("[-] Introspection is enabled and could leak sensitive schema information.")
+    else:
+        print_green("[+] Introspection is properly restricted.")
+
+
 if __name__ == "__main__":
     endpoints = load_endpoints("valid_endpoints.json")
     for url in endpoints:
@@ -189,3 +258,7 @@ if __name__ == "__main__":
         test_deep_recursion_attack()
         test_ssrf_vulnerability()
         test_sql_injection()
+        test_path_traversal()
+        test_permissions()
+        test_introspection()
+        
