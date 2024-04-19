@@ -1,8 +1,27 @@
 import requests
 import json
+from dvga_tests import *
+
+def print_banner():
+    banner = r"""
+    ========================================================================================================================================================================
+    
+     ██████  ██████   █████  ██████  ██   ██  ██████  ██          ███████  ██████  █████  ███    ██ ███    ██ ███████ ██████  
+    ██       ██   ██ ██   ██ ██   ██ ██   ██ ██    ██ ██          ██      ██      ██   ██ ████   ██ ████   ██ ██      ██   ██ 
+    ██   ███ ██████  ███████ ██████  ███████ ██    ██ ██          ███████ ██      ███████ ██ ██  ██ ██ ██  ██ █████   ██████  
+    ██    ██ ██   ██ ██   ██ ██      ██   ██ ██ ▄▄ ██ ██               ██ ██      ██   ██ ██  ██ ██ ██  ██ ██ ██      ██   ██ 
+     ██████  ██   ██ ██   ██ ██      ██   ██  ██████  ███████     ███████  ██████ ██   ██ ██   ████ ██   ████ ███████ ██   ██ 
+                                                ▀▀                                                                           
+
+    ========================================================================================================================================================================
+                                                                                                                                                                      
+    """
+    print(banner)
+    print("Welcome to the GRAPHQL Scanner")
+    print("This tool tests various GraphQL security vulnerabilities on specified endpoints.\n")
 
 
-# GRAPHQL_URL = "http://localhost:5013/graphiql"
+# GRAPHQL_URL = "http://localhost:5013/graphql"
 
 # Define the GraphQL endpoint URL
 def load_endpoints(filename):
@@ -223,452 +242,57 @@ def test_permissions():
 
 
 def test_introspection():
-    introspection_query = """
-    query {
-      __schema {
-        queryType { name }
-        mutationType { name }
-        types {
-          name
-        }
-      }
-    }
-    """
-    headers = {'Content-Type': 'application/json'}
-    payload = {'query': introspection_query}
-
-    print("Running introspection test...")
-    response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
-    if 'types' in response.text:
-        print_red("[-] Introspection is enabled and could leak sensitive schema information.")
-    else:
-        print_green("[+] Introspection is properly restricted.")
-
-def test_capitalize_field_argument():
-  query = '''
-    query {
-      users {
-        username(capitalize: true)
-      }
-    }
-    '''
-  r = graph_query(GRAPHQL_URL, query)
-
-  assert r.json()['data']['users'][0]['username'] in ('Admin', 'Operator')
-
-def test_show_network_directive():
-  query = '''
-    query {
-      pastes {
-          ipAddr @show_network(style:"cidr")
-      }
-    }
-  '''
-  r = graph_query(GRAPHQL_URL, query)
-
-  assert r.json()['data']['pastes'][0]['ipAddr'].endswith('/32')
-
-  query = '''
-    query {
-      pastes {
-        ipAddr @show_network(style:"netmask")
-      }
-    }
-  '''
-  r = graph_query(GRAPHQL_URL, query)
-
-  assert r.json()['data']['pastes'][0]['ipAddr'].startswith('255.255.')
-
-
-def test_mutation_login_success():
-  query = '''
-  mutation {
-    login(username: "operator", password:"password123") {
-      accessToken
-    }
-  }
-  '''
-  r = graph_query(GRAPHQL_URL, query)
-
-  assert r.json()['data']['login']['accessToken']
-
-
-def test_mutation_login_error():
-  query = '''
-  mutation {
-    login(username: "operator", password:"dolevwashere") {
-      accessToken
-    }
-  }
-  '''
-  r = graph_query(GRAPHQL_URL, query)
-
-  assert r.json()['errors'][0]['message'] == 'Authentication Failure'
-
-
-def test_query_me():
-  query = '''
-  query {
-    me(token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNjU2ODE0OTQ4LCJuYmYiOjE2NTY4MTQ5NDgsImp0aSI6ImI5N2FmY2QwLTUzMjctNGFmNi04YTM3LTRlMjdjODY5MGE2YyIsImlkZW50aXR5IjoiYWRtaW4iLCJleHAiOjE2NTY4MjIxNDh9.-56ZQN9jikpuuhpjHjy3vLvdwbtySs0mbdaSq-9RVGg") {
-      id
-      username
-      password
-    }
-  }
-  '''
-
-  r = graph_query(GRAPHQL_URL, query)
-
-  assert r.json()['data']['me']['id'] == '1'
-  assert r.json()['data']['me']['username'] == 'admin'
-  assert r.json()['data']['me']['password'] == 'changeme'
-
-
-def test_query_me_operator():
-  query = '''
-  query {
-    me(token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNjU2ODE0OTQ4LCJuYmYiOjE2NTY4MTQ5NDgsImp0aSI6ImI5N2FmY2QwLTUzMjctNGFmNi04YTM3LTRlMjdjODY5MGE2YyIsImlkZW50aXR5Ijoib3BlcmF0b3IiLCJleHAiOjE2NTY4MjIxNDh9.iZ-Sifz1WEkcy1CwX4c-rzI-QgfzUMqpWr2oYr8vZ1o") {
-      id
-      username
-      password
-    }
-  }
-  '''
-
-  r = graph_query(GRAPHQL_URL, query)
-
-  assert r.json()['data']['me']['id'] == '2'
-  assert r.json()['data']['me']['username'] == 'operator'
-  assert r.json()['data']['me']['password'] == '******'
-
-def test_check_graphiql_cookie():
-    r = requests.get(URL + '/')
-    assert r.status_code == 200
-    assert 'env=graphiql:disable' in r.headers.get('Set-Cookie')
-
-def test_check_batch_disabled():
-    query = """
-        query {
-            __typename
-        }
-    """
-    r = requests.post(GRAPHIQL_URL, verify=False, allow_redirects=True, timeout=4, json=[{"query":query}])
-    assert not isinstance(r.json(), list)
-    assert r.json()['errors'][0]['message'] == 'Batch GraphQL requests are not enabled.'
-
-def test_check_batch_enabled():
-    query = """
-        query {
-            __typename
-        }
-    """
-    r = requests.post(GRAPHQL_URL, verify=False, allow_redirects=True, timeout=4, json=[{"query":query}])
-    assert isinstance(r.json(), list)
-
-def test_dvga_is_up():
-    """Checks DVGA UI HTML returns correct information"""
-    r = requests.get(URL)
-    assert 'Damn Vulnerable GraphQL Application' in r.text
-
-def test_graphql_endpoint_up():
-    """Checks /graphql is up"""
-    r = requests.get(GRAPHQL_URL)
-    assert "Must provide query string." in r.json()['errors'][0]['message']
-
-def test_graphiql_endpoint_up():
-    """Checks /graphiql is up"""
-    r = requests.get(GRAPHIQL_URL)
-    assert "Must provide query string." in r.json()['errors'][0]['message']
-
-def test_check_introspect_fields():
-    fields = ['pastes', 'paste', 'systemUpdate', 'systemDiagnostics', 'systemDebug', 'systemHealth', 'users', 'readAndBurn', 'search', 'audits', 'deleteAllPastes', 'me']
-    r = requests.get(URL + '/difficulty/easy')
-    assert r.status_code == 200
-
-    query = """
-        query {
-        __schema {
-            queryType {
-              fields {
-                name
-              }
-            }
-        }
-      }
-    """
-    r = graph_query(GRAPHQL_URL, query)
-
-    for field in r.json()['data']['__schema']['queryType']['fields']:
-        field_name = field['name']
-        assert field_name in fields
-        assert not field_name not in fields
-        fields.remove(field_name)
-
-    assert len(fields) == 0
-
-def test_check_introspect_when_expert_mode():
-  query = """
-    query {
-       __schema {
-          __typename
-       }
-    }
-  """
-  r = graph_query(GRAPHQL_URL, query, headers={"X-DVGA-MODE":'Expert'})
-  assert r.status_code == 200
-  assert r.json()['errors'][0]['message'] == '400 Bad Request: Introspection is Disabled'
-
-
-def test_check_introspect_mutations():
-    fields = ['createUser', 'createPaste', 'editPaste', 'login', 'uploadPaste', 'importPaste', 'deletePaste']
-    r = requests.get(URL + '/difficulty/easy')
-    assert r.status_code == 200
-
-    query = """
-        query {
-        __schema {
-            mutationType {
-              fields {
-                name
-              }
-            }
-        }
-      }
-    """
-    r = graph_query(GRAPHQL_URL, query)
-
-    for field in r.json()['data']['__schema']['mutationType']['fields']:
-        field_name = field['name']
-        assert field_name in fields
-        assert not field_name not in fields
-        fields.remove(field_name)
-
-    assert len(fields) == 0
-
-def test_check_hardened_mode():
-    r = requests.get(URL + '/difficulty/hard')
-    assert r.status_code == 200
-
-    query = """
-        query {
+    introspection_query = {
+        "query": """
+        query IntrospectionQuery {
             __schema {
-                __typename
-            }
-        }
-    """
-    r = graph_query(GRAPHQL_URL, query)
-    assert r.json()['errors'][0]['message'] == '400 Bad Request: Introspection is Disabled'
-
-def test_check_easy_mode():
-    r = requests.get(URL + '/difficulty/easy')
-    assert r.status_code == 200
-
-    query = """
-        query {
-            __schema {
-                __typename
-            }
-        }
-    """
-    r = graph_query(GRAPHQL_URL, query)
-    assert r.json()['data']['__schema']['__typename'] == '__Schema'
-
-def test_mutation_createPaste():
-    query = '''
-    mutation {
-      createPaste(burn: false, title:"Integration Test", content:"Test", public: false) {
-        paste {
-        burn
-        title
-        content
-        public
-        owner {
-            id
-            name
-          }
-        }
-      }
-    }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.json()['data']['createPaste']['paste']['burn'] == False
-    assert r.json()['data']['createPaste']['paste']['title'] == 'Integration Test'
-    assert r.json()['data']['createPaste']['paste']['content'] == 'Test'
-    assert r.json()['data']['createPaste']['paste']['public'] == False
-    assert r.json()['data']['createPaste']['paste']['owner']['id']
-    assert r.json()['data']['createPaste']['paste']['owner']['name']
-
-def test_mutation_editPaste():
-    query = '''
-    mutation {
-        editPaste(id: 1, title:"Integration Test123", content:"Integration Test456") {
-            paste {
-                id
-                title
-                content
-                userAgent
-                burn
-                ownerId
-                owner {
-                    id
+                queryType { name }
+                mutationType { name }
+                subscriptionType { name }
+                types {
+                    name
+                }
+                directives {
                     name
                 }
             }
         }
+        """
     }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.json()['data']['editPaste']['paste']['id'] == '1'
-    assert r.json()['data']['editPaste']['paste']['title'] == 'Integration Test123'
-    assert r.json()['data']['editPaste']['paste']['content'] == 'Integration Test456'
-    assert r.json()['data']['editPaste']['paste']['userAgent']
-    assert r.json()['data']['editPaste']['paste']['burn'] == False
-    assert r.json()['data']['editPaste']['paste']['ownerId']
-    assert r.json()['data']['editPaste']['paste']['owner']['id'] == '1'
-    assert r.json()['data']['editPaste']['paste']['owner']['name']
-
-def test_mutation_deletePaste():
-    query = '''
-        mutation {
-            deletePaste(id: 91000) {
-                result
-            }
-        }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.json()['data']['deletePaste']['result'] == False
-
-    query = '''
-        mutation {
-            deletePaste(id: 5) {
-                result
-            }
-        }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.json()['data']['deletePaste']['result'] == True
-
-def test_mutation_uploadPaste():
-    query = '''
-        mutation {
-            uploadPaste(content:"Uploaded Content", filename:"test.txt") {
-                result
-            }
-        }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.json()['data']['uploadPaste']['result'] == "Uploaded Content"
-
-    query = '''
-        query {
-            pastes {
-                content
-            }
-        }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    found = False
-    for i in r.json()['data']['pastes']:
-        if i['content'] == 'Uploaded Content':
-            found = True
-
-    assert found == True
-
-def test_mutation_importPaste():
-    query = '''
-        mutation {
-            importPaste(scheme: "https", host:"icanhazip.com", path:"/", port:443) {
-                 result
-            }
-        }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.json()['data']['importPaste']['result']
-    assert '.' in r.json()['data']['importPaste']['result']
-
-def test_mutation_createUser():
-    query = '''
-    mutation {
-        createUser(userData:{username:"integrationuser", email:"test@blackhatgraphql.com", password:"strongpass"}) {
-            user {
-             username
-            }
-        }
-    }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.json()['data']['createUser']['user']['username'] == 'integrationuser'
-
-def test_mutation_createBurnPaste():
-    query = '''
-        mutation {
-            createPaste(burn: true, content: "Burn Me", title: "Burn Me", public: true) {
-                paste {
-                  content
-                  burn
-                  title
-                  id
-                }
-            }
-        }
-    '''
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.status_code == 200
-    assert r.json()['data']['createPaste']['paste']['content'] == 'Burn Me'
-    assert r.json()['data']['createPaste']['paste']['title'] == 'Burn Me'
-    assert r.json()['data']['createPaste']['paste']['id']
-
-    paste_id = r.json()['data']['createPaste']['paste']['id']
-
-    query = '''
-        query {
-            readAndBurn(id: %s) {
-                content
-                burn
-                title
-                id
-            }
-        }
-    ''' % paste_id
-
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.status_code == 200
-    assert r.json()['data']['readAndBurn']['content'] == 'Burn Me'
-    assert r.json()['data']['readAndBurn']['title'] == 'Burn Me'
-    assert r.json()['data']['readAndBurn']['id']
-
-
-    query = '''
-        query {
-            readAndBurn(id: %s) {
-                content
-                burn
-                title
-                id
-            }
-        }
-    ''' % paste_id
-    r = graph_query(GRAPHQL_URL, query)
-
-    assert r.status_code == 200
-    assert r.json()['data']['readAndBurn'] == None
-
+    headers = {'Content-Type': 'application/json'}
+    print("Running introspection test...")
+    try:
+        response = requests.post(GRAPHQL_URL, json=introspection_query, headers=headers)
+        response.raise_for_status()  
+        data = response.json()
+        if data.get('data', {}).get('__schema'):
+            print_red("[-] Introspection is enabled and could leak sensitive schema information.")
+        else:
+            print_green("[+] Introspection is properly restricted.")
+    except requests.exceptions.HTTPError as err:
+        print_red(f"HTTP error occurred: {err}")
+    except requests.exceptions.RequestException as e:
+        print_red(f"An error occurred during the request: {e}")
+    except ValueError:
+        print_red("Failed to decode JSON from response.")
 
 if __name__ == "__main__":
-    endpoints = load_endpoints("valid_endpoints.json")
+    print_banner()
+    choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
+    
+    if choice == 'manual':
+        # Single endpoint provided by the user
+        GRAPHQL_URL = input("Enter the GraphQL endpoint URL: ")
+        endpoints = [GRAPHQL_URL]  
+    elif choice == 'json':
+        endpoints = load_endpoints("./valid_endpoints.json")
+    else:
+        print("Invalid choice. Exiting.")
+        exit()
+
     for url in endpoints:
-        GRAPHQL_URL = url
         print(f"Running test cases on {url}...")
+        test_introspection()
         check_resource_request(url)
         test_dos_attack()
         test_alias_attack()
@@ -678,5 +302,61 @@ if __name__ == "__main__":
         test_sql_injection()
         test_path_traversal()
         test_permissions()
-        test_introspection()
         
+        test_capitalize_field_argument()
+        test_show_network_directive()
+        test_mutation_login_success()
+        test_mutation_login_error()
+        test_query_me()
+        test_query_me_operator()
+        test_batching()
+        test_batched_operation_names()
+        test_check_graphiql_cookie()
+        test_check_batch_disabled()
+        test_check_batch_enabled()
+        test_dvga_is_up()
+        test_graphql_endpoint_up()
+        test_graphiql_endpoint_up()
+        test_check_introspect_fields()
+        test_check_introspect_when_expert_mode()
+        test_check_introspect_mutations()
+        test_check_hardened_mode()
+        test_check_easy_mode()
+        test_mutation_createPaste()
+        test_mutation_editPaste()
+        test_mutation_deletePaste()
+        test_mutation_uploadPaste()
+        test_mutation_importPaste()
+        test_mutation_createUser()
+        test_mutation_createBurnPaste()
+        test_query_pastes()
+        test_query_paste_by_id()
+        test_query_systemHealth()
+        test_query_systemUpdate()
+        test_query_systemDebug()
+        test_query_users()
+        test_query_users_by_id()
+        test_query_read_and_burn()
+        test_query_search_on_user_object()
+        test_query_search_on_paste_object()
+        test_query_search_on_user_and_paste_object()
+        test_query_audits()
+        test_query_audits()
+        test_query_pastes_with_limit()
+        test_query_pastes_with_fragments()
+        test_check_rollback()
+        test_circular_query_pastes_owners()
+        test_aliases_overloading()
+        test_field_suggestions()
+        test_os_injection()
+        test_os_injection_alt()
+        test_xss()
+        test_log_injection()
+        test_html_injection()
+        test_sql_injection()
+        test_deny_list_expert_mode()
+        test_deny_list_expert_mode_bypass()
+        test_deny_list_beginner_mode()
+        test_circular_fragments()
+        test_stack_trace_errors()
+        test_check_websocket()
