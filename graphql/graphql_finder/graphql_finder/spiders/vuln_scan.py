@@ -1,8 +1,15 @@
 import requests
 import json
+import json
+
+
+# GRAPHQL_URL = "http://localhost:5013/graphiql"
 
 # Define the GraphQL endpoint URL
-GRAPHQL_URL = "http://localhost:5013/graphiql"
+def load_endpoints(filename):
+    with open(filename, "r") as file:
+        for line in file:
+            yield json.loads(line)['url']
 
 def print_red(text):
     print("\033[91m{}\033[0m".format(text))
@@ -171,12 +178,14 @@ def test_sql_injection():
 
 
 if __name__ == "__main__":
-    url = GRAPHQL_URL
-    print("Running test cases...")
-    check_resource_request(url)
-    test_dos_attack()
-    test_alias_attack()
-    test_sensitive_data()
-    test_deep_recursion_attack()
-    test_ssrf_vulnerability()
-    test_sql_injection()
+    endpoints = load_endpoints("valid_endpoints.json")
+    for url in endpoints:
+        GRAPHQL_URL = url
+        print(f"Running test cases on {url}...")
+        check_resource_request(url)
+        test_dos_attack()
+        test_alias_attack()
+        test_sensitive_data()
+        test_deep_recursion_attack()
+        test_ssrf_vulnerability()
+        test_sql_injection()

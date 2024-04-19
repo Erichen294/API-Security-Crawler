@@ -1,5 +1,6 @@
 import scrapy
 from scrapy.crawler import CrawlerProcess
+import json
 
 class GraphQLSpider(scrapy.Spider):
     name = 'graphql_spider'
@@ -111,6 +112,17 @@ class GraphQLSpider(scrapy.Spider):
         RED_END = '\033[0m'
         print(f"{RED_START}{message}{RED_END}")
         self.logger.info(message)  
+
+    # add into a valid endpoints into a file
+    def check_graphql_endpoint(self, response):
+        if response.status != 404:
+            # Save the valid endpoint to a file
+            with open("valid_endpoints.json", "a") as file:
+                json.dump({'url': response.url}, file)
+                file.write('\n')  # for new line
+            self.log_red(f"Checked GraphQL endpoint: {response.url} - Status: {response.status}")
+
+
 
 if __name__ == "__main__":
     process = CrawlerProcess()
