@@ -1,7 +1,6 @@
 import requests
 import json
-import json
-
+from dvga_tests import *
 
 # GRAPHQL_URL = "http://localhost:5013/graphql"
 
@@ -258,7 +257,6 @@ def test_introspection():
     except ValueError:
         print_red("Failed to decode JSON from response.")
 
-
 if __name__ == "__main__":
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
     
@@ -285,3 +283,61 @@ if __name__ == "__main__":
         test_sql_injection()
         test_path_traversal()
         test_permissions()
+        
+        test_capitalize_field_argument()
+        test_show_network_directive()
+        test_mutation_login_success()
+        test_mutation_login_error()
+        test_query_me()
+        test_query_me_operator()
+        test_batching()
+        test_batched_operation_names()
+        test_check_graphiql_cookie()
+        test_check_batch_disabled()
+        test_check_batch_enabled()
+        test_dvga_is_up()
+        test_graphql_endpoint_up()
+        test_graphiql_endpoint_up()
+        test_check_introspect_fields()
+        test_check_introspect_when_expert_mode()
+        test_check_introspect_mutations()
+        test_check_hardened_mode()
+        test_check_easy_mode()
+        test_mutation_createPaste()
+        test_mutation_editPaste()
+        test_mutation_deletePaste()
+        test_mutation_uploadPaste()
+        test_mutation_importPaste()
+        test_mutation_createUser()
+        test_mutation_createBurnPaste()
+        test_query_pastes()
+        test_query_paste_by_id()
+        test_query_systemHealth()
+        test_query_systemUpdate()
+        test_query_systemDebug()
+        test_query_users()
+        test_query_users_by_id()
+        test_query_read_and_burn()
+        test_query_search_on_user_object()
+        test_query_search_on_paste_object()
+        test_query_search_on_user_and_paste_object()
+        test_query_audits()
+        test_query_audits()
+        test_query_pastes_with_limit()
+        test_query_pastes_with_fragments()
+        test_check_rollback()
+        test_circular_query_pastes_owners()
+        test_aliases_overloading()
+        test_field_suggestions()
+        test_os_injection()
+        test_os_injection_alt()
+        test_xss()
+        test_log_injection()
+        test_html_injection()
+        test_sql_injection()
+        test_deny_list_expert_mode()
+        test_deny_list_expert_mode_bypass()
+        test_deny_list_beginner_mode()
+        test_circular_fragments()
+        test_stack_trace_errors()
+        test_check_websocket()
