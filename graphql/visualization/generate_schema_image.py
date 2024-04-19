@@ -121,6 +121,18 @@ def execute_graphqlviz(schema_file, output_file):
     else:
         print(f"Error generating graph: {stderr.decode()}")
 
+def analyze_schema_for_sensitivity(schema):
+    sensitive_keywords = ['password', 'creditCard', 'ssn', 'email']
+    sensitive_fields = []
+
+    for type in schema.get("__schema", {}).get("types", []):
+        for field in type.get("fields", []):
+            if any(keyword in field['name'].lower() for keyword in sensitive_keywords):
+                sensitive_fields.append((type['name'], field['name']))
+
+    print("Sensitive fields identified:", sensitive_fields)
+    return sensitive_fields
+
 if __name__ == "__main__":
     url = input("Enter the GraphQL endpoint URL: ")
     schema_filename = input("Enter filename to save the schema JSON (e.g., schema.json): ")
@@ -129,5 +141,7 @@ if __name__ == "__main__":
     if schema:
         save_schema_to_file(schema, schema_filename)
         execute_graphqlviz(schema_filename, output_image_file)
+        analyze_schema_for_sensitivity(schema)
     else:
         print("Failed to fetch or validate the GraphQL schema.")
+

