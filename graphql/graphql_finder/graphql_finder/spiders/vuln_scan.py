@@ -2,6 +2,25 @@ import requests
 import json
 from dvga_tests import *
 
+def print_banner():
+    banner = r"""
+    ========================================================================================================================================================================
+    
+     ██████  ██████   █████  ██████  ██   ██  ██████  ██          ███████  ██████  █████  ███    ██ ███    ██ ███████ ██████  
+    ██       ██   ██ ██   ██ ██   ██ ██   ██ ██    ██ ██          ██      ██      ██   ██ ████   ██ ████   ██ ██      ██   ██ 
+    ██   ███ ██████  ███████ ██████  ███████ ██    ██ ██          ███████ ██      ███████ ██ ██  ██ ██ ██  ██ █████   ██████  
+    ██    ██ ██   ██ ██   ██ ██      ██   ██ ██ ▄▄ ██ ██               ██ ██      ██   ██ ██  ██ ██ ██  ██ ██ ██      ██   ██ 
+     ██████  ██   ██ ██   ██ ██      ██   ██  ██████  ███████     ███████  ██████ ██   ██ ██   ████ ██   ████ ███████ ██   ██ 
+                                                ▀▀                                                                           
+
+    ========================================================================================================================================================================
+                                                                                                                                                                      
+    """
+    print(banner)
+    print("Welcome to the GRAPHQL Scanner")
+    print("This tool tests various GraphQL security vulnerabilities on specified endpoints.\n")
+
+
 # GRAPHQL_URL = "http://localhost:5013/graphql"
 
 # Define the GraphQL endpoint URL
@@ -258,6 +277,7 @@ def test_introspection():
         print_red("Failed to decode JSON from response.")
 
 if __name__ == "__main__":
+    print_banner()
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
     
     if choice == 'manual':
@@ -265,8 +285,7 @@ if __name__ == "__main__":
         GRAPHQL_URL = input("Enter the GraphQL endpoint URL: ")
         endpoints = [GRAPHQL_URL]  
     elif choice == 'json':
-        filename = input("Enter the filename containing endpoints (e.g., valid_endpoints.json): ")
-        endpoints = load_endpoints(filename)
+        endpoints = load_endpoints("./valid_endpoints.json")
     else:
         print("Invalid choice. Exiting.")
         exit()
