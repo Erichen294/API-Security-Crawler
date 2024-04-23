@@ -21,7 +21,7 @@ def print_banner():
     print("This tool tests various GraphQL security vulnerabilities on specified endpoints.\n")
 
 
-# GRAPHQL_URL = "http://localhost:5013/graphql"
+# GRAPHQL_URL = "http://127.0.0.1:31337/index.php?graphql"
 
 # Define the GraphQL endpoint URL
 def load_endpoints(filename):
@@ -277,6 +277,35 @@ def test_introspection():
     except ValueError:
         print_red("Failed to decode JSON from response.")
 
+def test_getUsers():
+    getUsers_query = {
+        'query': '''
+        query getUsers{
+          users(where:{role:ADMINISTRATOR}){
+            edges{
+              node{
+                userId
+                name
+              }
+            }
+          }
+        }
+        '''
+    }
+
+    try:
+        response = requests.post(GRAPHQL_URL, json=getUsers_query)
+        response.raise_for_status()
+        response_json = response.json()
+
+        if 'data' in response_json and 'users' in response_json['data']:
+            print_green("[+] getUsers testcase successfully executed.")
+            print("Response:", json.dumps(response_json, indent=4))
+        else:
+            print_red("[-] getUsers testcase failed.")
+    except Exception as e:
+        print("Error during getUsers testcase execution:", e)
+
 if __name__ == "__main__":
     print_banner()
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
@@ -294,17 +323,18 @@ if __name__ == "__main__":
     for url in endpoints:
         GRAPHQL_URL = url
         print(f"Running test cases on {url}...")
-        test_introspection()
-        check_resource_request(url)
-        test_dos_attack()
-        test_alias_attack()
-        test_sensitive_data()
-        test_deep_recursion_attack()
-        test_ssrf_vulnerability()
-        test_sql_injection()
-        test_path_traversal()
-        test_permissions()
-        
+        # test_introspection()
+        # check_resource_request(url)
+        # test_dos_attack()
+        # test_alias_attack()
+        # test_sensitive_data()
+        # test_deep_recursion_attack()
+        # test_ssrf_vulnerability()
+        # test_sql_injection()
+        # test_path_traversal()
+        # test_permissions()
+        test_getUsers()
+
         # test_capitalize_field_argument()
         # test_show_network_directive()
         # test_mutation_login_success()
