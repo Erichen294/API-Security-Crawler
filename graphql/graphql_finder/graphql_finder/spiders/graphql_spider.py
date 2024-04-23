@@ -5,7 +5,7 @@ import json
 class GraphQLSpider(scrapy.Spider):
     name = 'graphql_spider'
     allowed_domains = ['localhost']
-    start_urls = ['http://localhost:5013']
+    start_urls = ['http://localhost:9000']
 
     graphql_paths = [
         '/',
@@ -126,4 +126,5 @@ class GraphQLSpider(scrapy.Spider):
 
 if __name__ == "__main__":
     process = CrawlerProcess()
-    process.crawl
+    process.crawl(GraphQLSpider)
+    process.start()
