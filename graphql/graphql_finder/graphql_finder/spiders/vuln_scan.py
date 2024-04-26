@@ -323,6 +323,47 @@ def test_denialOfService(url):
     print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
     print('Response:', r.json())
 
+def post_comment(url, headers, postID, userID, comment, verbose=False):
+    payload = {
+        "query": """
+            mutation {
+                createComment(input: {
+                    postId: %d,
+                    userId: %d,
+                    content: "%s",
+                    clientMutationId: "UWHATM8",
+                }) {
+                    clientMutationId
+                }
+            }
+        """ % (int(postID), int(userID), comment)
+    }
+    
+    try:
+        response = requests.post(url, data=json.dumps(payload), headers=headers)
+        if response.status_code == 200 and 'UWHATM8' in response.text:
+            print_green("[+] Comment posted on article ID")
+        else:
+            print_red("\n[-] Error posting the comment. Check that postID and userID are correct")
+
+        if verbose:
+            print(response.text)
+
+            return
+    except Exception as e:
+        print_red("\n[-] An error occurred while posting the comment")
+
+        return
+    
+def test_unauthorized_comment():
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    postID = "1" 
+    userID = "2" 
+    comment = "This is a test comment."  # Comment to be posted
+    post_comment(url, headers, postID, userID, comment, verbose=True)
+
 if __name__ == "__main__":
     print_banner()
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
@@ -351,7 +392,8 @@ if __name__ == "__main__":
         # test_path_traversal()
         # test_permissions()
         # test_getUsers()
-        test_denialOfService(GRAPHQL_URL)
+        # test_denialOfService(GRAPHQL_URL)
+        test_unauthorized_comment()
 
         # test_capitalize_field_argument()
         # test_show_network_directive()
