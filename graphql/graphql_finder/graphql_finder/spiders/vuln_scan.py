@@ -321,7 +321,7 @@ def test_denialOfService(url):
     r = requests.post(url, json=queries)
     print_green("[+] denialOfService testcase successfully executed.")
     print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
-    print('Response:', r.json())
+    # print('Response:', r.json())
 
 def post_comment(url, headers, postID, userID, comment, verbose=False):
     payload = {
@@ -364,6 +364,44 @@ def test_unauthorized_comment():
     comment = "This is a test comment."  # Comment to be posted
     post_comment(url, headers, postID, userID, comment, verbose=True)
 
+# checks the server's ability to handle multiple, resource-intensive queries
+def test_batching_attack():
+    batch_queries = [{'query': '{ users { id, posts { id, title, comments { id, content } } } }'} for _ in range(50)]
+    try:
+        response = requests.post(GRAPHQL_URL, json=batch_queries)
+        if response.status_code == 200:
+            print_red("[!] Batching attack may be possible. Server responded with 200 OK.")
+        else:
+            print_green("[-] Batching attack mitigated. Response status: {}".format(response.status_code))
+    except Exception as e:
+        print_red("[-] Batching attack test failed: {}".format(e))
+
+def test_field_limiting():
+    # Attempt to request an excessive number of fields
+    query = 'query { user { ' + ' '.join(f'field{i}' for i in range(1000)) + ' } }'
+    try:
+        response = requests.post(GRAPHQL_URL, json={"query": query})
+        if response.status_code == 400 and 'too many fields' in response.text.lower():
+            print_green("[+] Field limiting is enforced.")
+        else:
+            print_red("[-] No field limiting detected, potential vulnerability.")
+    except Exception as e:
+        print_red(f"[-] Field limiting test failed: {e}")
+
+
+def test_unauthorized_mutation():
+    mutation = 'mutation { updatePost(id: "1", data: { title: "New Title" }) { title } }'
+    try:
+        response = requests.post(GRAPHQL_URL, json={"query": mutation})
+        if response.status_code in [200, 201] and "title" in response.json().get('data', {}):
+            print_red("[!] Unauthorized mutation may be possible.")
+        else:
+            print_green("[-] Mutation properly restricted.")
+    except Exception as e:
+        print_red(f"[-] Mutation test failed: {e}")
+
+
+
 if __name__ == "__main__":
     print_banner()
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
@@ -381,19 +419,23 @@ if __name__ == "__main__":
     for url in endpoints:
         GRAPHQL_URL = url
         print(f"Running test cases on {url}...")
-        # test_introspection()
-        # check_resource_request(url)
-        # test_dos_attack()
-        # test_alias_attack()
-        # test_sensitive_data()
-        # test_deep_recursion_attack()
-        # test_ssrf_vulnerability()
-        # test_sql_injection()
-        # test_path_traversal()
-        # test_permissions()
-        # test_getUsers()
-        # test_denialOfService(GRAPHQL_URL)
+        test_introspection()
+        check_resource_request(url)
+        test_dos_attack()
+        test_alias_attack()
+        test_sensitive_data()
+        test_deep_recursion_attack()
+        test_ssrf_vulnerability()
+        test_sql_injection()
+        test_path_traversal()
+        test_permissions()
+        test_getUsers()
+        test_denialOfService(GRAPHQL_URL)
         test_unauthorized_comment()
+        test_batching_attack()
+        test_field_limiting()
+        test_unauthorized_mutation()
+
 
         # test_capitalize_field_argument()
         # test_show_network_directive()
