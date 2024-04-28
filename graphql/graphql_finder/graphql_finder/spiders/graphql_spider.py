@@ -3,12 +3,15 @@ from scrapy.crawler import CrawlerProcess
 import json
 
 class GraphQLSpider(scrapy.Spider):
+    def __init__(self, start_urls=None, authorization_key=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start_urls = start_urls
+        self.authorization_key = authorization_key
+
     name = 'graphql_spider'
     allowed_domains = ['localhost']
-    start_urls = []
 
     graphql_paths = [
-        '/',
         '/altair',
         '/explorer',
         '/graph',
@@ -81,20 +84,20 @@ class GraphQLSpider(scrapy.Spider):
     ]
     
     def start_requests(self):
-        headers = {
-            'Content-Type': 'application/json',
-            # 'Authorization': 'eyJhbGciOiJSUzI1NiIsImtpZCI6ImpVcFZZYjI1ZHRlVUZYeWljLU56S3lldjhVSjI0T002Mjg1TGo5OFdCbFEiLCJ0eXAiOiJKV1QifQ.eyJpYXQiOjE3MTM4ODQ2OTYsIm93bmVyIjoic2FsZW9yIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwL2dyYXBocWwvIiwiZXhwIjoxNzEzODg0OTk2LCJ0b2tlbiI6InNqVFp2RkRIUmgwWSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJ0eXBlIjoiYWNjZXNzIiwidXNlcl9pZCI6IlZYTmxjam8zTVE9PSIsImlzX3N0YWZmIjp0cnVlfQ.fkgNQoTpZU_f4TXAEy4-GnbdxzTqKVFJf6M2hGRH716vpeniW2vr0RlYMglRdAMpuBoYcsWJ5gKbUBMfqVYhwzY57yi8P8RAUBuij-fH0nl_KmgCQB0P43T6rv9m6IzU-IIEzHcAHZThe5bIV3DuynJdBW43X7_eZh3v5rLysAy-aUnRCsomZOc0p2g2QtAebDBCxeipbPH86MiAEUs0MUZg_ptJXbkXFqqI3yJE6saK5BrLqO1_wWUgM82RB921khsUgKDtHTrg0Mm_Eq7c8jwCHGPRpQthWEZhxVb6KKPwxr-0z5wlqo8pgNtfGjP_P6ydnI0Kn-_FslEFS2W31g',  # Replace YOUR_TOKEN_HERE with your actual token
-        }
+        headers = {'Content-Type': 'application/json'}
+        if self.authorization_key:
+            headers['Authorization'] = self.authorization_key
 
         for end in self.graphql_paths:
-            url = 'http://localhost:5013' + end 
-            yield scrapy.Request(
-                url=url,
-                method='POST',
-                headers=headers,
-                body=json.dumps({'query': '{ __schema { types { name } } }'}),  # Sample query
-                callback=self.parse_graphql_response
-            )
+            for start_url in self.start_urls:
+                url = start_url + end
+                yield scrapy.Request(
+                    url=url,
+                    method='POST',
+                    headers=headers,
+                    body=json.dumps({'query': '{ __schema { types { name } } }'}),
+                    callback=self.parse_graphql_response
+                )
 
     def parse_graphql_response(self, response):
         if response.status == 200:
@@ -108,7 +111,7 @@ class GraphQLSpider(scrapy.Spider):
     def log(self, message):
         self.logger.info(message)
 
-if __name__ == "__main__":
-    process = CrawlerProcess()
-    process.crawl(GraphQLSpider)
-    process.start()
+# if __name__ == "__main__":
+#     process = CrawlerProcess()
+#     process.crawl(GraphQLSpider)
+#     process.start()
