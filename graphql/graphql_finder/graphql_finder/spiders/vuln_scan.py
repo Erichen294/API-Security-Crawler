@@ -63,13 +63,13 @@ def check_resource_request(url):
         if 'data' in response_json and '__type' in response_json['data']:
             # print_red("[!] Excessive resource request vulnerability found at {}".format(url))
             # print("Evidence:", json.dumps(response_json, indent=4))
-            return "Excessive resource request vulnerability failed"
+            return "Excessive resource request vulnerability found."
         else:
             # print_green("[-] No excessive resource request vulnerability found at {}".format(url))
-            return "Excessive resource request vulnerability successful"
+            return "Excessive resource request vulnerability not found."
     except Exception as e:
-        print("Error during resource request check:", e)
-
+        return "Error during resource request check."
+    
 def test_dos_attack(url):
     query = "query { systemUpdate }" * 100 
     print("Running DoS attack test...")
@@ -81,12 +81,13 @@ def test_dos_attack(url):
         # print_green("[+] DoS attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
             # print_green("[+] DoS attack test successful.")
-            return "DoS attack test successful"
+            return "DoS attack vulnerability not found."
         else:
             # print_red("[-] DoS attack test failed: Server responded with 200 status code.")
-            return "DoS attack test failed"
+            return "DoS attack vulnerability found."
     except Exception as e:
-        print_green("[-] DoS attack test failed: {}".format(e))
+        # print_red("[-] DoS attack test failed: {}".format(e))
+        return "DoS attack test failed."
 
 def test_alias_attack(url):
     query_list = []
@@ -104,13 +105,14 @@ def test_alias_attack(url):
         # print_green("[+] Alias-based attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
             # print_green("[+] Alias-based attack test successful.")
-            return " Alias-based attack test successful"
+            return " Alias-based attack vulnerability not found."
         else:
             # print_red("[-] Alias-based attack test failed: Server responded with 200 status code.")
-            return " Alias-based attack test failed"
+            return " Alias-based attack vulnerability found."
 
     except Exception as e:
-        print_green("[-] Alias-based attack test failed: {}".format(e))
+        # print_red("[-] Alias-based attack test failed: {}".format(e))
+        return "Alias-based attack test failed."
 
 def test_sensitive_data(url):
     sensitive_fields = [
@@ -139,13 +141,13 @@ def test_sensitive_data(url):
             if 'data' in response_json and 'search' in response_json['data']:
                 # print_red("[!] Sensitive data leak detected in field: {}".format(field))
                 # print("Evidence:", json.dumps(response_json, indent=4))
-                return "Sensitive data leak test failed"
+                return "Sensitive data leak vulnerability found."
             else:
                 # print_green("[-] No sensitive data leak detected in field: {}".format(field))
-                return "Sensitive data leak test successful"
+                return "Sensitive data leak vulnerability not found."
     except Exception as e:
         # print("Error during sensitive data test:", e)
-        return "Sensitive data leak test not applicable"
+        return "Sensitive data leak test not applicable."
 
 def test_deep_recursion_attack(url):
     deep_query = 'query { user { friends { friends { friends { id } } } } }'
@@ -153,12 +155,13 @@ def test_deep_recursion_attack(url):
         response = requests.post(url, json={"query": deep_query})
         if response.status_code == 200:
             # print_red("[-] Deep recursion query handling may be inadequate.")
-            return "Deep recursion query handling test failed"
+            return "Deep recursion query handling vulnerability found."
         else:
             # print_green("[+] Server managed deep recursion safely.")
-            return "Deep recursion query handling test successful"
+            return "Deep recursion query handling vulnerability not found."
     except Exception as e:
-        print_red(f"[-] Deep recursion test failed: {e}")
+        # print_red(f"[-] Deep recursion test failed: {e}")
+        return "Deep recursion test failed."
 
 def test_ssrf_vulnerability(url):
     # Mutation query attempting to access a potentially private internal service
@@ -178,12 +181,12 @@ def test_ssrf_vulnerability(url):
         if response.status_code == 200:
             # print_red("[!] SSRF attack may be possible.")
             # print("Response data:", response.json())
-            return "SSRF attack test successful"
+            return "SSRF attack vulnerability found."
         else:
             # print_green(f"[-] SSRF attack test failed with status code: {response.status_code}")
-            return "SSRF attack test failed"
+            return "SSRF attack vulnerability not found."
     except Exception as e:
-        print_red(f"Failed to send SSRF test request: {e}")
+        return "Failed to send SSRF test request."
 
 def test_sql_injection(url):
     sql_injection_query = """
@@ -203,13 +206,12 @@ def test_sql_injection(url):
         if response.status_code == 200 and 'data' in response.json():
             # print_red("[!] SQL injection may be possible.")
             # print("Response data:", response.json())
-            return "SQL injection test failed"
+            return "SQL injection vulnerability found."
         else:
             # print_green(f"[-] SQL injection test did not execute with usual symptoms, status code: {response.status_code}")
-            return "SQL injection test successful"
+            return "SQL injection vulnerability not found."
     except Exception as e:
-        print_red(f"Failed to send SQL injection test request: {e}")
-
+        return "Failed to send SQL injection test request."
 
 def test_path_traversal(url):
     path_traversal_query = """
@@ -229,17 +231,17 @@ def test_path_traversal(url):
             response_data = response.json()
             if response_data.get('data') and response_data['data']['uploadPaste']['result']:
                 # print_red("[!] Path traversal attack may be possible.")
-                return "Path traversal attack test successful"
+                return "Path traversal attack vulnerability found."
                 # print("Response data:", response_data)
             else:
                 # print_green("[-] Path traversal test did not execute successfully, status code: {response.status_code}")
-                return "Path traversal attack test failed"
+                return "Path traversal attack vulnerability not found."
         else:
             # print_green(f"[-] Path traversal test failed with status code: {response.status_code}")
-            return "Path traversal attack test successful"
+            return "Path traversal attack vulnerability not found."
     except Exception as e:
         # print_red(f"Failed to send path traversal test request: {e}")
-        return "Path traversal test not applicable"
+        return "Path traversal test not applicable."
 
 
 def test_permissions(url):
@@ -257,10 +259,10 @@ def test_permissions(url):
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code == 403 or response.status_code == 401:
         # print_green("[+] Proper authorization checks are in place.")
-        return "Proper authorization checks test successful"
+        return "Proper authorization checks vulnerability not found."
     else:
         # print_red("[-] Permissions test failed, unauthorized actions might be possible.")
-        return "Proper authorization checks test failed"
+        return "Proper authorization checks vulnerability found."
 
 def test_introspection(url):
     introspection_query = {
@@ -288,17 +290,17 @@ def test_introspection(url):
         data = response.json()
         if data.get('data', {}).get('__schema'):
             # print_red("[-] Introspection is enabled and could leak sensitive schema information.")
-            return "Introspection test failed, could leak sensitive information"
+            return "Introspection test vulnerability found."
         else:
             # print_green("[+] Introspection is properly restricted.")
-            return "Introspection test successful"
+            return "Introspection test vulnerability not found."
     except requests.exceptions.HTTPError as err:
-        print_red(f"HTTP error occurred: {err}")
+        return "HTTP error occurred."
     except requests.exceptions.RequestException as e:
-        print_red(f"An error occurred during the request: {e}")
+        return "An error occurred during the request."
     except ValueError:
-        print_red("Failed to decode JSON from response.")
-
+        return "Failed to decode JSON from response."
+    
 def test_getUsers(url):
     getUsers_query = {
         'query': '''
@@ -322,14 +324,14 @@ def test_getUsers(url):
 
         if 'data' in response_json and 'users' in response_json['data']:
             # print_green("[+] getUsers testcase successfully executed.")
-            return "Get users test successful"
+            return "Get users vulnerability found."
             # print("Response:", json.dumps(response_json, indent=4))
         else:
             # print_red("[-] getUsers testcase failed.")
-            return "Get users test failed"
+            return "Get users vulnerability not found."
     except Exception as e:
         # print("Error during getUsers testcase execution:", e)
-        return "Get users test not applicable"
+        return "Get users test not applicable."
 
 def test_denialOfService(url):
     FORCE_MULTIPLIER = 10000
@@ -343,13 +345,23 @@ def test_denialOfService(url):
     for _ in range(0, CHAINED_REQUESTS):
         queries.append(query)
 
-    r = requests.post(url, json=queries)
-    # print_green("[+] denialOfService testcase successfully executed.")
-    return "denialOfService test successful. Time took {} seconds".format(r.elapsed.total_seconds())
-    # print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
-    # print('Response:', r.json())
-
-def post_comment(url, headers, postID, userID, comment, verbose=False):
+    # Perform the DoS attack
+    try:
+        r = requests.post(url, json=queries)
+        if r.status_code == 200:
+             return "Denial of Service vulnerability not found. The server is still responsive."
+        else:
+            return "Denial of Service vulnerability found. The server may have crashed or become unresponsive."
+    except requests.exceptions.RequestException as e:
+        return "Error occurred while making the request"
+    
+def test_unauthorized_comment(url):
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    postID = "1" 
+    userID = "1" 
+    comment = "This is a test comment."  # Comment to be posted
     payload = {
         "query": """
             mutation {
@@ -364,33 +376,18 @@ def post_comment(url, headers, postID, userID, comment, verbose=False):
             }
         """ % (int(postID), int(userID), comment)
     }
-    
+
     try:
         response = requests.post(url, data=json.dumps(payload), headers=headers)
         if response.status_code == 200 and 'UWHATM8' in response.text:
             # print_green("[+] Comment posted on article ID")
-            return "Unauthorized comments test successful"
+            return "Unauthorized comment vulnerability found."
         else:
             # print_red("\n[-] Error posting the comment. Check that postID and userID are correct")
-            return "Unauthorized comments test failed"
-
-        if verbose:
-            print(response.text)
-
-            return
+            return "Unauthorized comment vulnerability not found."
     except Exception as e:
-        print_red("\n[-] An error occurred while posting the comment")
-
-        return
-    
-def test_unauthorized_comment(url):
-    headers = {
-        'Content-Type': 'application/json',
-    }
-    postID = "1" 
-    userID = "2" 
-    comment = "This is a test comment."  # Comment to be posted
-    post_comment(url, headers, postID, userID, comment, verbose=True)
+        # print_red("\n[-] An error occurred while posting the comment")
+        return "\nAn error occurred while testing unauthorized comment."
 
 # checks the server's ability to handle multiple, resource-intensive queries
 def test_batching_attack(url):
@@ -399,12 +396,12 @@ def test_batching_attack(url):
         response = requests.post(url, json=batch_queries)
         if response.status_code == 200:
             # print_red("[!] Batching attack may be possible. Server responded with 200 OK.")
-            return "Batching attack test failed"
+            return "Batching attack vulnerability found."
         else:
             # print_green("[-] Batching attack mitigated. Response status: {}".format(response.status_code))
-            return "Batching attack test successful"
+            return "Batching attack vulnerability not found."
     except Exception as e:
-        print_red("[-] Batching attack test failed: {}".format(e))
+        return "Batching attack test failed."
 
 def test_field_limiting(url):
     # Attempt to request an excessive number of fields
@@ -413,13 +410,13 @@ def test_field_limiting(url):
         response = requests.post(GRAPHQL_URL, json={"query": query})
         if response.status_code == 400 and 'too many fields' in response.text.lower():
             # print_green("[+] Field limiting is enforced.")
-            return "Field limiting test successful"
+            return "Field limiting vulnerability not found."
         else:
             # print_red("[-] No field limiting detected, potential vulnerability.")
-            return "Field limiting test failed"
+            return "Field limiting vulnerability found."
     except Exception as e:
         # print_red(f"[-] Field limiting test failed: {e}")
-        return "Field limiting test not applicable"
+        return "Field limiting test not applicable."
 
 
 def test_unauthorized_mutation(url):
@@ -428,10 +425,10 @@ def test_unauthorized_mutation(url):
         response = requests.post(url, json={"query": mutation})
         if response.status_code in [200, 201] and "title" in response.json().get('data', {}):
             # print_red("[!] Unauthorized mutation may be possible.")
-            return "Unauthorized mutation test failed"
+            return "Unauthorized mutation vulnerability found."
         else:
             # print_green("[-] Mutation properly restricted.")
-            return "Unauthorized mutation test successful"
+            return "Unauthorized mutation vulnerability not found."
     except Exception as e:
         print_red(f"[-] Mutation test failed: {e}")
 
@@ -521,97 +518,31 @@ def fetch_schema(url):
         print_red(f"Failed to fetch schema: {e}")
         return []
     
-
-
-
-if __name__ == "__main__":
-    print_banner()
-    choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
-    
-    if choice == 'manual':
-        # Single endpoint provided by the user
-        GRAPHQL_URL = input("Enter the GraphQL endpoint URL: ")
-        endpoints = [GRAPHQL_URL]  
-    elif choice == 'json':
-        endpoints = load_endpoints("./valid_endpoints.json")
-    else:
-        print("Invalid choice. Exiting.")
-        exit()
-
-    for url in endpoints:
-        GRAPHQL_URL = url
-        print(f"Running test cases on {url}...")
-        test_introspection(url)
-        check_resource_request(url)
-        test_dos_attack(url)
-        test_alias_attack(url)
-        test_sensitive_data(url)
-        test_deep_recursion_attack(url)
-        test_ssrf_vulnerability(url)
-        test_sql_injection(url)
-        test_path_traversal(url)
-        test_permissions(url)
-        test_getUsers(url)
-        test_unauthorized_comment(url)
-        test_batching_attack(url)
-        test_field_limiting(url)
-        test_unauthorized_mutation(url)
-
-
-        # test_capitalize_field_argument()
-        # test_show_network_directive()
-        # test_mutation_login_success()
-        # test_mutation_login_error()
-        # test_query_me()
-        # test_query_me_operator()
-        # test_batching()
-        # test_batched_operation_names()
-        # test_check_graphiql_cookie()
-        # test_check_batch_disabled()
-        # test_check_batch_enabled()
-        # test_dvga_is_up()
-        # test_graphql_endpoint_up()
-        # test_graphiql_endpoint_up()
-        # test_check_introspect_fields()
-        # test_check_introspect_when_expert_mode()
-        # test_check_introspect_mutations()
-        # test_check_hardened_mode()
-        # test_check_easy_mode()
-        # test_mutation_createPaste()
-        # test_mutation_editPaste()
-        # test_mutation_deletePaste()
-        # test_mutation_uploadPaste()
-        # test_mutation_importPaste()
-        # test_mutation_createUser()
-        # test_mutation_createBurnPaste()
-        # test_query_pastes()
-        # test_query_paste_by_id()
-        # test_query_systemHealth()
-        # test_query_systemUpdate()
-        # test_query_systemDebug()
-        # test_query_users()
-        # test_query_users_by_id()
-        # test_query_read_and_burn()
-        # test_query_search_on_user_object()
-        # test_query_search_on_paste_object()
-        # test_query_search_on_user_and_paste_object()
-        # test_query_audits()
-        # test_query_audits()
-        # test_query_pastes_with_limit()
-        # test_query_pastes_with_fragments()
-        # test_check_rollback()
-        # test_circular_query_pastes_owners()
-        # test_aliases_overloading()
-        # test_field_suggestions()
-        # test_os_injection()
-        # test_os_injection_alt()
-        # test_xss()
-        # test_log_injection()
-        # test_html_injection()
-        # test_sql_injection()
-        # test_deny_list_expert_mode()
-        # test_deny_list_expert_mode_bypass()
-        # test_deny_list_beginner_mode()
-        # test_circular_fragments()
-        # test_stack_trace_errors()
-        # test_check_websocket()
+#     if choice == 'manual':
+#         # Single endpoint provided by the user
+#         GRAPHQL_URL = input("Enter the GraphQL endpoint URL: ")
+#         endpoints = [GRAPHQL_URL]  
+#     elif choice == 'json':
+#         endpoints = load_endpoints("./valid_endpoints.json")
+#     else:
+#         print("Invalid choice. Exiting.")
+#         exit()
+#     for url in endpoints:
+#         GRAPHQL_URL = url
+#         print(f"Running test cases on {url}...")
+#         test_introspection()
+#         check_resource_request(url)
+#         test_dos_attack()
+#         test_alias_attack()
+#         test_sensitive_data()
+#         test_deep_recursion_attack()
+#         test_ssrf_vulnerability()
+#         test_sql_injection()
+#         test_path_traversal()
+#         test_permissions()
+#         test_getUsers()
+#         test_denialOfService(GRAPHQL_URL)
+#        test_unauthorized_comment()
+#         test_batching_attack()
+#         test_field_limiting()
+#         test_unauthorized_mutation()
