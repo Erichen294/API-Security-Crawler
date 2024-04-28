@@ -81,10 +81,10 @@ def test_dos_attack(url):
         # print_green("[+] DoS attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
             # print_green("[+] DoS attack test successful.")
-            return "DoS attack vulnerability not found."
+            return "DoS attack vulnerability found."
         else:
             # print_red("[-] DoS attack test failed: Server responded with 200 status code.")
-            return "DoS attack vulnerability found."
+            return "DoS attack vulnerability not found."
     except Exception as e:
         # print_red("[-] DoS attack test failed: {}".format(e))
         return "DoS attack test failed."
