@@ -2,6 +2,25 @@ import json
 from vuln_scan import *
 from graphql_spider import *
 
+def print_banner():
+    banner = r"""
+    ========================================================================================================================================================================
+    
+     ██████  ██████   █████  ██████  ██   ██  ██████  ██          ███████  ██████  █████  ███    ██ ███    ██ ███████ ██████  
+    ██       ██   ██ ██   ██ ██   ██ ██   ██ ██    ██ ██          ██      ██      ██   ██ ████   ██ ████   ██ ██      ██   ██ 
+    ██   ███ ██████  ███████ ██████  ███████ ██    ██ ██          ███████ ██      ███████ ██ ██  ██ ██ ██  ██ █████   ██████  
+    ██    ██ ██   ██ ██   ██ ██      ██   ██ ██ ▄▄ ██ ██               ██ ██      ██   ██ ██  ██ ██ ██  ██ ██ ██      ██   ██ 
+     ██████  ██   ██ ██   ██ ██      ██   ██  ██████  ███████     ███████  ██████ ██   ██ ██   ████ ██   ████ ███████ ██   ██ 
+                                                ▀▀                                                                           
+
+    ========================================================================================================================================================================
+                                                                                                                                                                      
+    """
+    print(banner)
+    print("Welcome to the GRAPHQL Scanner")
+    print("This tool tests various GraphQL security vulnerabilities on specified endpoints.\n")
+
+
 def generate_report(url):
     results = {}
 
@@ -40,8 +59,7 @@ def load_endpoints(filename):
 
 
 if __name__ == "__main__":
-
-
+    print_banner()
     choice = input("Do you want to enter an endpoint manually or crawl through the web application? Enter 'manual' or 'crawl': ").strip().lower()
     
     if choice == 'manual':
@@ -60,7 +78,7 @@ if __name__ == "__main__":
         })
         process.crawl(GraphQLSpider, start_urls=[starting_url], authorization=authorization, authorization_key=authorization_key )
         process.start()
-        for url in load_endpoints("./valid_endpoints.json"):
+        for url in load_endpoints(".valid_endpoints.json"):
             GRAPHQL_URL = url
             report_results = generate_report(GRAPHQL_URL)
             print_report(report_results)
