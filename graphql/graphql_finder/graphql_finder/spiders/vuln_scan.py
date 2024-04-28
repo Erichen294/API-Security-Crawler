@@ -61,30 +61,34 @@ def check_resource_request(url):
         response_json = response.json()
 
         if 'data' in response_json and '__type' in response_json['data']:
-            print_red("[!] Excessive resource request vulnerability found at {}".format(url))
-            print("Evidence:", json.dumps(response_json, indent=4))
+            # print_red("[!] Excessive resource request vulnerability found at {}".format(url))
+            # print("Evidence:", json.dumps(response_json, indent=4))
+            return "Excessive resource request vulnerability failed"
         else:
-            print_green("[-] No excessive resource request vulnerability found at {}".format(url))
+            # print_green("[-] No excessive resource request vulnerability found at {}".format(url))
+            return "Excessive resource request vulnerability successful"
     except Exception as e:
         print("Error during resource request check:", e)
 
-def test_dos_attack():
+def test_dos_attack(url):
     query = "query { systemUpdate }" * 100 
     print("Running DoS attack test...")
     try:
         status_codes = []
         for i in range(100):  
-            response = requests.post(GRAPHQL_URL, json={"query": query})
+            response = requests.post(url, json={"query": query})
             status_codes.append(response.status_code)
-        print("[+] DoS attack test status codes: {}".format(status_codes))
+        # print_green("[+] DoS attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
-            print_red("[+] Potential DoS attack test vulnerability. Check status codes above.")
+            # print_green("[+] DoS attack test successful.")
+            return "DoS attack test successful"
         else:
-            print_green("[-] DoS attack test failed: Server responded with 200 status code.")
+            # print_red("[-] DoS attack test failed: Server responded with 200 status code.")
+            return "DoS attack test failed"
     except Exception as e:
         print_green("[-] DoS attack test failed: {}".format(e))
 
-def test_alias_attack():
+def test_alias_attack(url):
     query_list = []
     for i in range(100):
         alias = f"q{i}: systemUpdate"
@@ -95,18 +99,20 @@ def test_alias_attack():
     try:
         status_codes = []
         for i in range(100):  
-            response = requests.post(GRAPHQL_URL, json={"query": query})
+            response = requests.post(url, json={"query": query})
             status_codes.append(response.status_code)
-        print("[+] Alias-based attack test status codes: {}".format(status_codes))
+        # print_green("[+] Alias-based attack test status codes: {}".format(status_codes))
         if 200 not in status_codes:
-           print_red("[+] Alias-based attack test successful.")
+            # print_green("[+] Alias-based attack test successful.")
+            return " Alias-based attack test successful"
         else:
-           print_green("[-] Alias-based attack test failed: Server responded with 200 status code.")
+            # print_red("[-] Alias-based attack test failed: Server responded with 200 status code.")
+            return " Alias-based attack test failed"
 
     except Exception as e:
         print_green("[-] Alias-based attack test failed: {}".format(e))
 
-def test_sensitive_data():
+def test_sensitive_data(url):
     sensitive_fields = [
         'email',
         'password',
@@ -126,30 +132,35 @@ def test_sensitive_data():
                 }}
                 '''
             }
-            response = requests.post(GRAPHQL_URL, json=sensitive_query)
+            response = requests.post(url, json=sensitive_query)
             response.raise_for_status()
             response_json = response.json()
 
             if 'data' in response_json and 'search' in response_json['data']:
-                print_red("[!] Sensitive data leak detected in field: {}".format(field))
-                print("Evidence:", json.dumps(response_json, indent=4))
+                # print_red("[!] Sensitive data leak detected in field: {}".format(field))
+                # print("Evidence:", json.dumps(response_json, indent=4))
+                return "Sensitive data leak test failed"
             else:
-                print_green("[-] No sensitive data leak detected in field: {}".format(field))
+                # print_green("[-] No sensitive data leak detected in field: {}".format(field))
+                return "Sensitive data leak test successful"
     except Exception as e:
-        print("Error during sensitive data test:", e)
+        # print("Error during sensitive data test:", e)
+        return "Sensitive data leak test not applicable"
 
-def test_deep_recursion_attack():
+def test_deep_recursion_attack(url):
     deep_query = 'query { user { friends { friends { friends { id } } } } }'
     try:
-        response = requests.post(GRAPHQL_URL, json={"query": deep_query})
+        response = requests.post(url, json={"query": deep_query})
         if response.status_code == 200:
-            print_red("[-] Deep recursion query handling may be inadequate.")
+            # print_red("[-] Deep recursion query handling may be inadequate.")
+            return "Deep recursion query handling test failed"
         else:
-            print_green("[+] Server managed deep recursion safely.")
+            # print_green("[+] Server managed deep recursion safely.")
+            return "Deep recursion query handling test successful"
     except Exception as e:
         print_red(f"[-] Deep recursion test failed: {e}")
 
-def test_ssrf_vulnerability():
+def test_ssrf_vulnerability(url):
     # Mutation query attempting to access a potentially private internal service
     ssrf_query = """
     mutation {
@@ -163,16 +174,18 @@ def test_ssrf_vulnerability():
 
     try:
         print("Running SSRF attack test...")
-        response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
-            print_red("[!] SSRF attack may be possible.")
-            print("Response data:", response.json())
+            # print_red("[!] SSRF attack may be possible.")
+            # print("Response data:", response.json())
+            return "SSRF attack test successful"
         else:
-            print_green(f"[-] SSRF attack test failed with status code: {response.status_code}")
+            # print_green(f"[-] SSRF attack test failed with status code: {response.status_code}")
+            return "SSRF attack test failed"
     except Exception as e:
         print_red(f"Failed to send SSRF test request: {e}")
 
-def test_sql_injection():
+def test_sql_injection(url):
     sql_injection_query = """
     query {
       pastes(filter:"aaa ' or 1=1--") {
@@ -186,17 +199,19 @@ def test_sql_injection():
 
     try:
         print("Running SQL injection test...")
-        response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200 and 'data' in response.json():
-            print_red("[!] SQL injection may be possible.")
-            print("Response data:", response.json())
+            # print_red("[!] SQL injection may be possible.")
+            # print("Response data:", response.json())
+            return "SQL injection test failed"
         else:
-            print_green(f"[-] SQL injection test did not execute with usual symptoms, status code: {response.status_code}")
+            # print_green(f"[-] SQL injection test did not execute with usual symptoms, status code: {response.status_code}")
+            return "SQL injection test successful"
     except Exception as e:
         print_red(f"Failed to send SQL injection test request: {e}")
 
 
-def test_path_traversal():
+def test_path_traversal(url):
     path_traversal_query = """
     mutation {
       uploadPaste(filename:"../../../../../tmp/file.txt", content:"hi"){
@@ -209,21 +224,25 @@ def test_path_traversal():
 
     try:
         print("Running path traversal test...")
-        response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
             response_data = response.json()
             if response_data.get('data') and response_data['data']['uploadPaste']['result']:
-                print_red("[!] Path traversal attack may be possible.")
-                print("Response data:", response_data)
+                # print_red("[!] Path traversal attack may be possible.")
+                return "Path traversal attack test successful"
+                # print("Response data:", response_data)
             else:
-                print_green("[-] Path traversal test did not execute successfully, status code: {response.status_code}")
+                # print_green("[-] Path traversal test did not execute successfully, status code: {response.status_code}")
+                return "Path traversal attack test failed"
         else:
-            print_green(f"[-] Path traversal test failed with status code: {response.status_code}")
+            # print_green(f"[-] Path traversal test failed with status code: {response.status_code}")
+            return "Path traversal attack test successful"
     except Exception as e:
-        print_red(f"Failed to send path traversal test request: {e}")
+        # print_red(f"Failed to send path traversal test request: {e}")
+        return "Path traversal test not applicable"
 
 
-def test_permissions():
+def test_permissions(url):
     sensitive_query = """
     mutation {
       deleteUser(userId: "12345") {
@@ -235,14 +254,15 @@ def test_permissions():
     payload = {'query': sensitive_query}
 
     print("Running permissions test...")
-    response = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+    response = requests.post(url, json=payload, headers=headers)
     if response.status_code == 403 or response.status_code == 401:
-        print_green("[+] Proper authorization checks are in place.")
+        # print_green("[+] Proper authorization checks are in place.")
+        return "Proper authorization checks test successful"
     else:
-        print_red("[-] Permissions test failed, unauthorized actions might be possible.")
+        # print_red("[-] Permissions test failed, unauthorized actions might be possible.")
+        return "Proper authorization checks test failed"
 
-
-def test_introspection():
+def test_introspection(url):
     introspection_query = {
         "query": """
         query IntrospectionQuery {
@@ -263,13 +283,15 @@ def test_introspection():
     headers = {'Content-Type': 'application/json'}
     print("Running introspection test...")
     try:
-        response = requests.post(GRAPHQL_URL, json=introspection_query, headers=headers)
+        response = requests.post(url, json=introspection_query, headers=headers)
         response.raise_for_status()  
         data = response.json()
         if data.get('data', {}).get('__schema'):
-            print_red("[-] Introspection is enabled and could leak sensitive schema information.")
+            # print_red("[-] Introspection is enabled and could leak sensitive schema information.")
+            return "Introspection test failed, could leak sensitive information"
         else:
-            print_green("[+] Introspection is properly restricted.")
+            # print_green("[+] Introspection is properly restricted.")
+            return "Introspection test successful"
     except requests.exceptions.HTTPError as err:
         print_red(f"HTTP error occurred: {err}")
     except requests.exceptions.RequestException as e:
@@ -277,7 +299,7 @@ def test_introspection():
     except ValueError:
         print_red("Failed to decode JSON from response.")
 
-def test_getUsers():
+def test_getUsers(url):
     getUsers_query = {
         'query': '''
         query getUsers{
@@ -294,17 +316,20 @@ def test_getUsers():
     }
 
     try:
-        response = requests.post(GRAPHQL_URL, json=getUsers_query)
+        response = requests.post(url, json=getUsers_query)
         response.raise_for_status()
         response_json = response.json()
 
         if 'data' in response_json and 'users' in response_json['data']:
-            print_green("[+] getUsers testcase successfully executed.")
-            print("Response:", json.dumps(response_json, indent=4))
+            # print_green("[+] getUsers testcase successfully executed.")
+            return "Get users test successful"
+            # print("Response:", json.dumps(response_json, indent=4))
         else:
-            print_red("[-] getUsers testcase failed.")
+            # print_red("[-] getUsers testcase failed.")
+            return "Get users test failed"
     except Exception as e:
-        print("Error during getUsers testcase execution:", e)
+        # print("Error during getUsers testcase execution:", e)
+        return "Get users test not applicable"
 
 def test_denialOfService(url):
     FORCE_MULTIPLIER = 10000
@@ -319,8 +344,9 @@ def test_denialOfService(url):
         queries.append(query)
 
     r = requests.post(url, json=queries)
-    print_green("[+] denialOfService testcase successfully executed.")
-    print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
+    # print_green("[+] denialOfService testcase successfully executed.")
+    return "denialOfService test successful. Time took {} seconds".format(r.elapsed.total_seconds())
+    # print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
     # print('Response:', r.json())
 
 def post_comment(url, headers, postID, userID, comment, verbose=False):
@@ -342,9 +368,11 @@ def post_comment(url, headers, postID, userID, comment, verbose=False):
     try:
         response = requests.post(url, data=json.dumps(payload), headers=headers)
         if response.status_code == 200 and 'UWHATM8' in response.text:
-            print_green("[+] Comment posted on article ID")
+            # print_green("[+] Comment posted on article ID")
+            return "Unauthorized comments test successful"
         else:
-            print_red("\n[-] Error posting the comment. Check that postID and userID are correct")
+            # print_red("\n[-] Error posting the comment. Check that postID and userID are correct")
+            return "Unauthorized comments test failed"
 
         if verbose:
             print(response.text)
@@ -355,7 +383,7 @@ def post_comment(url, headers, postID, userID, comment, verbose=False):
 
         return
     
-def test_unauthorized_comment():
+def test_unauthorized_comment(url):
     headers = {
         'Content-Type': 'application/json',
     }
@@ -365,41 +393,47 @@ def test_unauthorized_comment():
     post_comment(url, headers, postID, userID, comment, verbose=True)
 
 # checks the server's ability to handle multiple, resource-intensive queries
-def test_batching_attack():
+def test_batching_attack(url):
     batch_queries = [{'query': '{ users { id, posts { id, title, comments { id, content } } } }'} for _ in range(50)]
     try:
-        response = requests.post(GRAPHQL_URL, json=batch_queries)
+        response = requests.post(url, json=batch_queries)
         if response.status_code == 200:
-            print_red("[!] Batching attack may be possible. Server responded with 200 OK.")
+            # print_red("[!] Batching attack may be possible. Server responded with 200 OK.")
+            return "Batching attack test failed"
         else:
-            print_green("[-] Batching attack mitigated. Response status: {}".format(response.status_code))
+            # print_green("[-] Batching attack mitigated. Response status: {}".format(response.status_code))
+            return "Batching attack test successful"
     except Exception as e:
         print_red("[-] Batching attack test failed: {}".format(e))
 
-def test_field_limiting():
+def test_field_limiting(url):
     # Attempt to request an excessive number of fields
     query = 'query { user { ' + ' '.join(f'field{i}' for i in range(1000)) + ' } }'
     try:
         response = requests.post(GRAPHQL_URL, json={"query": query})
         if response.status_code == 400 and 'too many fields' in response.text.lower():
-            print_green("[+] Field limiting is enforced.")
+            # print_green("[+] Field limiting is enforced.")
+            return "Field limiting test successful"
         else:
-            print_red("[-] No field limiting detected, potential vulnerability.")
+            # print_red("[-] No field limiting detected, potential vulnerability.")
+            return "Field limiting test failed"
     except Exception as e:
-        print_red(f"[-] Field limiting test failed: {e}")
+        # print_red(f"[-] Field limiting test failed: {e}")
+        return "Field limiting test not applicable"
 
 
-def test_unauthorized_mutation():
+def test_unauthorized_mutation(url):
     mutation = 'mutation { updatePost(id: "1", data: { title: "New Title" }) { title } }'
     try:
-        response = requests.post(GRAPHQL_URL, json={"query": mutation})
+        response = requests.post(url, json={"query": mutation})
         if response.status_code in [200, 201] and "title" in response.json().get('data', {}):
-            print_red("[!] Unauthorized mutation may be possible.")
+            # print_red("[!] Unauthorized mutation may be possible.")
+            return "Unauthorized mutation test failed"
         else:
-            print_green("[-] Mutation properly restricted.")
+            # print_green("[-] Mutation properly restricted.")
+            return "Unauthorized mutation test successful"
     except Exception as e:
         print_red(f"[-] Mutation test failed: {e}")
-
 
 def test_sensitive_data_dynamically(url, schema):
     """ Dynamically test for sensitive data based on schema introspection. """
@@ -488,6 +522,8 @@ def fetch_schema(url):
         return []
     
 
+
+
 if __name__ == "__main__":
     print_banner()
     choice = input("Do you want to enter an endpoint manually or use a JSON file? Enter 'manual' or 'json': ").strip().lower()
@@ -505,26 +541,21 @@ if __name__ == "__main__":
     for url in endpoints:
         GRAPHQL_URL = url
         print(f"Running test cases on {url}...")
-        schema = fetch_schema(url)
-        if schema:
-            print_red("Successfully fetched schema.")
-            test_sensitive_data_dynamically(url, schema)
-        else:
-            print_red("Failed to dynamically tests bugs due to instrospection disabled.")
-        test_introspection()
-        test_dos_attack()
-        test_alias_attack()
-        test_sensitive_data()
-        test_deep_recursion_attack()
-        test_ssrf_vulnerability()
-        test_sql_injection()
-        test_path_traversal()
-        test_permissions()
-        test_getUsers()
-        test_unauthorized_comment()
-        test_batching_attack()
-        test_field_limiting()
-        test_unauthorized_mutation()
+        test_introspection(url)
+        check_resource_request(url)
+        test_dos_attack(url)
+        test_alias_attack(url)
+        test_sensitive_data(url)
+        test_deep_recursion_attack(url)
+        test_ssrf_vulnerability(url)
+        test_sql_injection(url)
+        test_path_traversal(url)
+        test_permissions(url)
+        test_getUsers(url)
+        test_unauthorized_comment(url)
+        test_batching_attack(url)
+        test_field_limiting(url)
+        test_unauthorized_mutation(url)
 
 
         # test_capitalize_field_argument()
