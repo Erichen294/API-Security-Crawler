@@ -2,7 +2,7 @@ import subprocess
 import json
 import requests
 
-def fetch_graphql_schema(url):
+def fetch_graphql_schema(url, auth_token=None):
     """Fetches the GraphQL schema via an introspection query."""
     introspection_query = {
         "query": """query IntrospectionQuery {
@@ -97,6 +97,9 @@ def fetch_graphql_schema(url):
     }
 
     headers = {"Content-Type": "application/json"}
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+
     response = requests.post(url, json=introspection_query, headers=headers)
     
     if response.status_code == 200:
