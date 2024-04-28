@@ -66,8 +66,8 @@ if __name__ == "__main__":
     if choice == 'manual':
         url = input("Enter the GraphQL endpoint URL: ")
         GRAPHQL_URL = url 
-        gnereate_report = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
-        if gnereate_report.lower() == 'y':
+        generate_report = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
+        if generate_report.lower() == 'y':
             schema = fetch_graphql_schema(url)
             if schema:
                 schema_filename = "schema.json"
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         })
         process.crawl(GraphQLSpider, start_urls=[starting_url], authorization=authorization, authorization_key=authorization_key )
         process.start()
-        for url in load_endpoints(".valid_endpoints.json"):
+        for url in load_endpoints("./valid_endpoints.json"):
             GRAPHQL_URL = url
             report_results = generate_report(GRAPHQL_URL)
             print_report(report_results)
