@@ -16,6 +16,7 @@ class GraphQLSpider(scrapy.Spider):
         '/explorer',
         '/graph',
         '/graphql',
+        '/graphql/',
         '/graphql/console',
         '/graphql-explorer',
         '/playground',
