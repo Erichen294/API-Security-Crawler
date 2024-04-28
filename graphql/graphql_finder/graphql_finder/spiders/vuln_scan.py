@@ -345,18 +345,22 @@ def test_denialOfService(url):
     for _ in range(0, CHAINED_REQUESTS):
         queries.append(query)
 
-    r = requests.post(url, json=queries)
-    # print_green("[+] denialOfService testcase successfully executed.")
-    return "DenialOfService test successful. Time took {} seconds".format(r.elapsed.total_seconds())
-    # print('Time took: {} seconds '.format(r.elapsed.total_seconds()))
-    # print('Response:', r.json())
+    # Perform the DoS attack
+    try:
+        r = requests.post(url, json=queries)
+        if r.status_code == 200:
+             return "Denial of Service vulnerability not found. The server is still responsive."
+        else:
+            return "Denial of Service vulnerability found. The server may have crashed or become unresponsive."
+    except requests.exceptions.RequestException as e:
+        return "Error occurred while making the request"
     
 def test_unauthorized_comment(url):
     headers = {
         'Content-Type': 'application/json',
     }
     postID = "1" 
-    userID = "2" 
+    userID = "1" 
     comment = "This is a test comment."  # Comment to be posted
     payload = {
         "query": """
