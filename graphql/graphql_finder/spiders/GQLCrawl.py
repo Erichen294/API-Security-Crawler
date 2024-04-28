@@ -81,6 +81,7 @@ if __name__ == "__main__":
     elif choice == 'crawl':
         starting_url = input("Enter the starting URL for the spider: ")
         authorization = input("Does your application need authorization? Enter 'Y' or 'N': ")
+        schema = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
         authorization_key = None
         if authorization == 'Y':
             authorization_key = input("Enter the authorization key: ")
@@ -93,4 +94,12 @@ if __name__ == "__main__":
             GRAPHQL_URL = url
             report_results = generate_report(GRAPHQL_URL)
             print_report(report_results)
-
+            if schema.lower() == 'y':
+                schema_table = fetch_graphql_schema(url)
+                if schema_table:
+                    schema_filename = "schema.json"
+                    output_image_file = "schema.png"
+                    save_schema_to_file(schema_table, schema_filename)
+                    execute_graphqlviz(schema_filename, output_image_file)
+            else:
+                print("GraphQL schema not fetched or failed to fetch.")
