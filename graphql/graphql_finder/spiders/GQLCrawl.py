@@ -66,8 +66,8 @@ if __name__ == "__main__":
     if choice == 'manual':
         url = input("Enter the GraphQL endpoint URL: ")
         GRAPHQL_URL = url 
-        gnereate_report = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
-        if gnereate_report.lower() == 'y':
+        generate_visual = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
+        if generate_visual.lower() == 'y':
             schema = fetch_graphql_schema(url)
             if schema:
                 schema_filename = "schema.json"
