@@ -17,7 +17,7 @@ def generate_report(url):
     results['Path Traversal'] = test_path_traversal(url)
     results['Permissions'] = test_permissions(url)
     results['Get Users'] = test_getUsers(url)
-    results['Denial of Service'] = test_denialOfService(url)
+    # results['Denial of Service'] = test_denialOfService(url)
     results['Unauthorized Comment'] = test_unauthorized_comment(url)
     results['Batching Attack'] = test_batching_attack(url)
     results['Field Limiting'] = test_field_limiting(url)
@@ -47,12 +47,18 @@ if __name__ == "__main__":
     if choice == 'manual':
         url = input("Enter the GraphQL endpoint URL: ")
         GRAPHQL_URL = url 
+        report_results = generate_report(GRAPHQL_URL)
+        print_report(report_results)
     elif choice == 'crawl':
         starting_url = input("Enter the starting URL for the spider: ")
+        authorization = input("Does your application need authorization? Enter 'Y' or 'N': ")
+        authorization_key = None
+        if authorization == 'Y':
+            authorization_key = input("Enter the authorization key: ")
         process = CrawlerProcess({
             'USER_AGENT': 'GQLCrawl/1.0'
         })
-        process.crawl(GraphQLSpider, start_urls=[starting_url])
+        process.crawl(GraphQLSpider, start_urls=[starting_url], authorization=authorization, authorization_key=authorization_key )
         process.start()
         for url in load_endpoints("./valid_endpoints.json"):
             GRAPHQL_URL = url
