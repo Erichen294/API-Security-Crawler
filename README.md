@@ -1,16 +1,20 @@
-# API-Security-Crawler
+# API-Security-Crawler GraphQL Instructions
+
+**Description**
+
+GraphQL is a query language for APIs that allows clients to request only the data they need. The scanner detects various vulnerabilities including sensitive data exposure, unauthorized field access, injection attacks, denial of service attacks, and more. It covers a range of potential security risks within GraphQL APIs.
 
 **Requirements to install beforehand** 
 - GraphQL Visualization: 
   - npm install -g graphqlviz
   - sudo apt install graphviz or brew install graphviz (source: https://graphviz.org/download/)
 
+- Tester websites: Navigate to folder tester websites to see read me for each individual website.
 
-To run GraphQL webcrawler: scrapy crawl graphql_spider
+- Python installations:
+  - pip install requests
+  - pip install scrapy 
 
-To run GraphQL table visualization: 
-1. cd graphql/visualization
-2. npm install -g graphqlviz
-3. python generate_schema_image.py
-
-To run vulnerability scanner: python vuln_scan.py
+**To run GraphQL vulnerability scanner once installation is finished: **
+- cd .\graphql\graphql_finder\graphql_finder\spiders\
+- python GQLCrawl.py
