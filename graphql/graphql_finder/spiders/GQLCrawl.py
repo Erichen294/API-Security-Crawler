@@ -30,7 +30,6 @@ def generate_report(url, auth_token=None):
     results['Resource Request'] = check_resource_request(url, auth_token)
     results['DoS Attack'] = test_dos_attack(url, auth_token)
     results['Alias Attack'] = test_alias_attack(url, auth_token)
-    results['Sensitive Data'] = test_sensitive_data(url, auth_token)
     results['Deep Recursion'] = test_deep_recursion_attack(url, auth_token)
     results['SSRF Vulnerability'] = test_ssrf_vulnerability(url, auth_token)
     results['SQL Injection'] = test_sql_injection(url, auth_token)
@@ -41,7 +40,6 @@ def generate_report(url, auth_token=None):
     results['Batching Attack'] = test_batching_attack(url, auth_token)
     results['Field Limiting'] = test_field_limiting(url, auth_token)
     results['Unauthorized Mutation'] = test_unauthorized_mutation(url, auth_token)
-
     return results
 
 def print_report(results):

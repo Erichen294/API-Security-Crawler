@@ -208,12 +208,20 @@ def test_introspection(url, auth_token=None):
     }
     try:
         response = requests.post(url, json=introspection_query, headers=get_headers(auth_token))
-        if 'data' in response.json().get('__schema'):
+        response.raise_for_status() 
+        data = response.json()
+        if data.get('data', {}).get('__schema'):
             return "Introspection test vulnerability found."
         else:
             return "Introspection test vulnerability not found."
-    except Exception as e:
-        return "Introspection test failed: " + str(e)
+    except requests.exceptions.HTTPError:
+        return "HTTP error occurred."
+    except requests.exceptions.RequestException as e:
+        return f"An error occurred during the request: {str(e)}"
+    except ValueError:
+        return "Failed to decode JSON from response."
+
+    
     
 def test_getUsers(url, auth_token=None):
     getUsers_query = {
