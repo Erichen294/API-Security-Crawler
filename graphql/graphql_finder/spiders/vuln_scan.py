@@ -169,7 +169,7 @@ def test_path_traversal(url, auth_token=None):
         else:
             return "Path traversal attack vulnerability not found."
     except Exception as e:
-        return "Path traversal test not applicable: " + str(e)
+        return "Path traversal test not applicable."
 
 def test_permissions(url, auth_token=None):
     sensitive_query = """
@@ -248,7 +248,7 @@ def test_getUsers(url, auth_token=None):
         else:
             return "Get users vulnerability not found."
     except Exception as e:
-        return f"Get users test not applicable: {str(e)}"
+        return f"Get users test not applicable."
 
 def test_denialOfService(url, auth_token=None):
     FORCE_MULTIPLIER = 10000
@@ -308,7 +308,7 @@ def test_field_limiting(url, auth_token=None):
         else:
             return "Field limiting vulnerability found."
     except Exception as e:
-        return f"Field limiting test not applicable: {str(e)}"
+        return f"Field limiting test not applicable."
 
 def test_unauthorized_mutation(url, auth_token=None):
     mutation_query = 'mutation { updatePost(id: "1", data: { title: "New Title" }) { title } }'
