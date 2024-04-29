@@ -695,3 +695,4 @@ def fetch_schema_deeper(url, auth_token=None):
     else:
         print(f"Failed to fetch schema: {response.status_code}")
         return None
+

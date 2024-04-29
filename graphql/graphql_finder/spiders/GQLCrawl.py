@@ -22,7 +22,7 @@ def print_banner():
     print("This tool tests various GraphQL security vulnerabilities on specified endpoints.\n")
 
 
-def generate_report(url, auth_token=None):
+def generate_report(url, auth_token=None, results_filename=None):
     results = {}
 
     # Run tests and collect results
@@ -36,7 +36,7 @@ def generate_report(url, auth_token=None):
         results['Subscription Tests'] = test_dynamic_subscription(url, schema, auth_token, results_filename)
         results['Path Traversal'] = test_path_traversal(url, schema, auth_token, results_filename)
         results['DoS Attack'] = test_dos_attack(url, schema, auth_token, results_filename)
-        # results['Deep Recursion'] = test_deep_recursion_attack(url, schema, auth_token, results_filename)
+        results['Deep Recursion'] = test_deep_recursion_attack(url, schema, auth_token, results_filename)
         results['SSRF Vulnerability'] = test_ssrf_vulnerability(url, schema, auth_token, results_filename)
         results['SQL Injection'] = test_sql_injections(url, auth_token, file_schema, results_filename)
         results['Permissions'] = test_permissions(url, schema, auth_token, results_filename)
@@ -80,7 +80,6 @@ results_filename = "vulnerabilities.json"
 if __name__ == "__main__":
     print_banner()
     choice = input("Do you want to enter an endpoint manually or crawl through the web application? Enter 'manual' or 'crawl': ").strip().lower()
-    choice = "manual"
     if choice == 'manual':
         url = input("Enter the GraphQL endpoint URL: ")
         authorization_key = None
@@ -98,7 +97,7 @@ if __name__ == "__main__":
                 save_schema_to_file(schema_table, schema_filename)
                 execute_graphqlviz(schema_filename, output_image_file)
         else:
-            print("GraphQL schema not fetched or failed to fetch.")
+            print("GraphQL visualization not fetched or failed to fetch.")
         custom_filename = input("Enter a custom filename for saving the test results (leave blank to use default): ").strip()
         if custom_filename:
             results_filename = custom_filename 
@@ -108,8 +107,11 @@ if __name__ == "__main__":
         starting_url = input("Enter the starting URL for the spider: ")
         authorization = input("Does your application need authorization? Enter 'Y' or 'N': ")
         schema = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
+        custom_filename = input("Enter a custom filename for saving the test results (leave blank to use default): ").strip()
+        if custom_filename:
+            results_filename = custom_filename 
         authorization_key = None
-        if authorization == 'Y':
+        if authorization.lower() == 'y':
             authorization_key = input("Enter the authorization key: ")
         process = CrawlerProcess({
             'USER_AGENT': 'GQLCrawl/1.0'
@@ -119,7 +121,9 @@ if __name__ == "__main__":
         for url in load_endpoints("./valid_endpoints.json"):
             print('/n')
             print("\033[94mGraphQL endpoint: \033[0m", url)
-            GRAPHQL_URL = url
+            GRAPHQL_URL = url   
+            report_results = generate_report(GRAPHQL_URL, authorization_key, results_filename)
+            print_report(report_results)
             if schema.lower() == 'y':
                 schema_table = fetch_graphql_schema(url)
                 if schema_table:
@@ -128,11 +132,6 @@ if __name__ == "__main__":
                     save_schema_to_file(schema_table, schema_filename)
                     execute_graphqlviz(schema_filename, output_image_file)
             else:
-                print("GraphQL schema not fetched or failed to fetch.")
-            custom_filename = input("Enter a custom filename for saving the test results (leave blank to use default): ").strip()
-            if custom_filename:
-                results_filename = custom_filename 
-            report_results = generate_report(GRAPHQL_URL, authorization_key)
-            print_report(report_results)
+                print("GraphQL visualization not fetched or failed to fetch.")
 
         
