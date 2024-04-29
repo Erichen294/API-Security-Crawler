@@ -169,7 +169,7 @@ def test_path_traversal(url, auth_token=None):
         else:
             return "Path traversal attack vulnerability not found."
     except Exception as e:
-        return "Path traversal test not applicable: "
+        return "Path traversal test not applicable: " + str(e)
 
 def test_permissions(url, auth_token=None):
     sensitive_query = """
@@ -248,7 +248,7 @@ def test_getUsers(url, auth_token=None):
         else:
             return "Get users vulnerability not found."
     except Exception as e:
-        return f"Get users test not applicable."
+        return f"Get users test not applicable: {str(e)}"
 
 def test_denialOfService(url, auth_token=None):
     FORCE_MULTIPLIER = 10000
@@ -308,7 +308,7 @@ def test_field_limiting(url, auth_token=None):
         else:
             return "Field limiting vulnerability found."
     except Exception as e:
-        return f"Field limiting test not applicable"
+        return f"Field limiting test not applicable: {str(e)}"
 
 def test_unauthorized_mutation(url, auth_token=None):
     mutation_query = 'mutation { updatePost(id: "1", data: { title: "New Title" }) { title } }'
@@ -321,53 +321,111 @@ def test_unauthorized_mutation(url, auth_token=None):
     except Exception as e:
         return f"Mutation test failed: {str(e)}"
 
-def test_sensitive_data_dynamically(url, schema):
+def test_sensitive_data_dynamically(url, schema, auth_token=None):
     """ Dynamically test for sensitive data based on schema introspection. """
     sensitive_keywords = [
-        'password', 'passcode', 'passwd', 'pin', 'creditcard', 'ccnumber', 'cardnum', 'ssn', 'socialsecuritynumber', 
+        'password', 'passcode', 'passwd', 'pin', 'creditcard', 'ccnumber', 'cardnum', 'ssn', 'socialsecuritynumber',
         'secret', 'token', 'apikey', 'api_key', 'accesstoken', 'access_token', 'auth', 'authentication', 'credentials',
-        'privatekey', 'private_key', 'secretkey', 'secret_key', 'encryptionkey', 'encryption_key', 
-        'bank', 'accountnumber', 'account_num', 'routingnumber', 'routing_num', 'financial', 
+        'privatekey', 'private_key', 'secretkey', 'secret_key', 'encryptionkey', 'encryption_key',
+        'bank', 'accountnumber', 'account_num', 'routingnumber', 'routing_num', 'financial',
         'salary', 'birthdate', 'birthplace', 'passportnumber', 'passport_num', 'driverlicense', 'driver_license_num',
-        'address', 'email', 'phone', 'phonenumber', 'mobile', 'cell', 'contact', 'zip', 'postal', 'postcode', 
+        'address', 'email', 'phone', 'phonenumber', 'mobile', 'cell', 'contact', 'zip', 'postal', 'postcode',
         'signature', 'profile', 'ssn', 'dni', 'nationalid', 'national_id', 'taxid', 'tax_id', 'health', 'insurance',
         'beneficiary', 'beneficiary_id', 'custodian', 'guardian', 'sessionid', 'session_id', 'cookie', 'authentication_token'
     ]
 
     sensitive_fields = []
+    findings = []
 
     # Identify potentially sensitive fields from the schema
     for type_info in schema:
         if type_info.get('fields'):
             for field in type_info['fields']:
                 if any(keyword in field['name'].lower() for keyword in sensitive_keywords):
-                    sensitive_fields.append(f"{type_info['name']}{{ {field['name']} }}")
+                    sensitive_fields.append((type_info['name'], field['name']))
 
     # Test each sensitive field found
-    print("Running dynamic sensitive data tests...")
-    for query in sensitive_fields:
-        try:
-            response = requests.post(url, json={'query': '{ ' + query + ' }'}, headers={'Content-Type': 'application/json'})
-            if response.status_code == 200 and response.json().get('data'):
-                print_red(f"[!] Sensitive data leak detected in field: {query}")
-                print("Evidence:", json.dumps(response.json(), indent=4))
-            else:
-                print_green(f"[-] No sensitive data leak detected in field: {query}")
-        except Exception as e:
-            print("Error during sensitive data test:", e)
+    for type_name, field_name in sensitive_fields:
+        query = f'{{ {type_name} {{ {field_name} }} }}'
+        response = requests.post(url, json={'query': query}, headers=get_headers(auth_token))
+        if response.status_code == 200 and response.json().get('data', {}).get(type_name):
+            findings.append(f"Sensitive data leak detected in field: {field_name} of type {type_name}")
+        else:
+            findings.append(f"No sensitive data leak detected in field: {field_name} of type {type_name}")
 
-def get_nested_fields(field, depth=0, max_depth=2):
-    """ Recursively get nested fields if the field is of type OBJECT. """
-    if depth > max_depth:
-        return ""
-    fields = ""
-    if field.get('type').get('kind') == 'OBJECT':
-        nested_fields = field['type'].get('fields', [])
-        for nested_field in nested_fields:
-            fields += f"{nested_field['name']} {get_nested_fields(nested_field, depth + 1, max_depth)}, "
-    elif field.get('type').get('kind') == 'NON_NULL' or field.get('type').get('kind') == 'LIST':
-        return get_nested_fields({'type': field['type']['ofType']}, depth, max_depth)
-    return fields
+    return findings
+
+def test_dynamic_nested_query(url, schema, auth_token=None):
+    """Dynamically tests for handling of deeply nested queries."""
+    findings = []
+    for type_info in schema:
+        if type_info.get('fields'):
+            query_fields = []
+            for field in type_info['fields']:
+                if field['type']['kind'] == 'OBJECT':
+                    nested_fields = ' '.join([nested_field['name'] for nested_field in field['type'].get('fields', []) if nested_field['type']['kind'] != 'OBJECT'])
+                    if nested_fields:
+                        query_fields.append(f"{field['name']} {{ {nested_fields} }}")
+            if query_fields:
+                full_query = f'{{ {type_info["name"]} {{ ' + ' '.join(query_fields) + ' }} }}'
+                response = requests.post(url, json={'query': full_query}, headers=get_headers(auth_token))
+                if response.status_code != 200:
+                    findings.append(f"Potential issue with deep nesting in {type_info['name']}")
+                else:
+                    findings.append(f"Nested queries handled well for {type_info['name']}")
+
+    return findings
+
+def test_dynamic_field_accessibility(url, schema, auth_token=None):
+    """Tests for unauthorized access to potentially restricted fields."""
+    restricted_keywords = ['admin', 'restricted', 'private', 'confidential']
+    findings = []
+
+    for type_info in schema:
+        if type_info.get('fields'):
+            for field in type_info['fields']:
+                if any(keyword in field['name'].lower() for keyword in restricted_keywords):
+                    query = f'{{ {type_info["name"]} {{ {field["name"]} }} }}'
+                    response = requests.post(url, json={'query': query}, headers=get_headers(auth_token))
+                    if response.status_code == 200 and response.json().get('data', {}).get(type_info['name']):
+                        findings.append(f"Unauthorized access detected: {field['name']} in {type_info['name']}")
+                    else:
+                        findings.append(f"Access properly restricted for {field['name']} in {type_info['name']}")
+
+    return findings
+
+def test_dynamic_mutation(url, schema, auth_token=None):
+    """Attempts mutations on all mutable fields to identify unauthorized write access vulnerabilities."""
+    findings = []
+    mutation_keywords = ['update', 'create', 'delete', 'add', 'remove', 'set']
+
+    for type_info in schema:
+        if type_info.get('fields'):
+            for field in type_info['fields']:
+                if 'mutation' in type_info['name'].lower() or any(keyword in field['name'].lower() for keyword in mutation_keywords):
+                    mutation_query = f'mutation {{ {field["name"]}(input: {{}}) {{ id }} }}'
+                    response = requests.post(url, json={'query': mutation_query}, headers=get_headers(auth_token))
+                    if response.status_code == 200:
+                        findings.append(f"Mutation may be possible on {field['name']} in {type_info['name']}")
+                    else:
+                        findings.append(f"Mutation restricted on {field['name']} in {type_info['name']}")
+
+    return findings
+
+def test_dynamic_subscription(url, schema, auth_token=None):
+    """Tests GraphQL subscriptions for unauthorized access or data leakage issues."""
+    findings = []
+    for type_info in schema:
+        if 'subscription' in type_info['name'].lower():
+            for field in type_info['fields']:
+                subscription_query = f'subscription {{ {field["name"]} {{ id }} }}'
+                response = requests.post(url, json={'query': subscription_query}, headers=get_headers(auth_token))
+                if response.status_code == 200:
+                    findings.append(f"Subscription potentially leaking data on {field['name']}")
+                else:
+                    findings.append(f"Subscription access restricted for {field['name']}")
+
+    return findings
 
 def fetch_schema(url, auth_token=None):
     """ Fetch the GraphQL schema via introspection. """

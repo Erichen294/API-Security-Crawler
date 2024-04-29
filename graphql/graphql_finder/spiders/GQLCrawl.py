@@ -27,7 +27,16 @@ def generate_report(url, auth_token=None):
 
     # Run tests and collect results
     results['Introspection'] = test_introspection(url, auth_token)
-    results['Generate Schema'] = generate_schema(url, auth_token)
+    schema = fetch_schema(url, auth_token)  
+    # Run dynamic tests if successful 
+    if schema:
+        results['Generate Schema'] = "Schema successfully fetched."
+        results['Sensitive Data Dynamic Tests'] = test_sensitive_data_dynamically(url, schema, auth_token)
+        results['Field Accessibility Tests'] = test_dynamic_field_accessibility(url, schema, auth_token)
+        results['Mutation Tests'] = test_dynamic_mutation(url, schema, auth_token)
+        results['Subscription Tests'] = test_dynamic_subscription(url, schema, auth_token)
+    else:
+        results['Generate Schema'] = "Failed to fetch schema."    '
     results['Resource Request'] = check_resource_request(url, auth_token)
     results['DoS Attack'] = test_dos_attack(url, auth_token)
     results['Alias Attack'] = test_alias_attack(url, auth_token)
