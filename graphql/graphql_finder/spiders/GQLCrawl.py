@@ -37,6 +37,7 @@ def generate_report(url, auth_token=None):
         results['Subscription Tests'] = test_dynamic_subscription(url, schema, auth_token)
     else:
         results['Generate Schema'] = "Failed to fetch schema."    
+    # Static test cases 
     results['Resource Request'] = check_resource_request(url, auth_token)
     results['DoS Attack'] = test_dos_attack(url, auth_token)
     results['Alias Attack'] = test_alias_attack(url, auth_token)
@@ -79,7 +80,7 @@ if __name__ == "__main__":
             authorization_key = input("Enter the authorization key: ")
         schema = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
         if schema.lower() == 'y':
-            schema_table = fetch_schema(url, authorization_key)
+            schema_table = fetch_graphql_schema(url, authorization_key)
             if schema_table:
                 schema_filename = "schema.json"
                 output_image_file = "schema.png"

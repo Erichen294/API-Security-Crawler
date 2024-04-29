@@ -1,6 +1,5 @@
 import requests
 import json
-from dvga_tests import *
 
 # Define the GraphQL endpoint URL
 def load_endpoints(filename):
