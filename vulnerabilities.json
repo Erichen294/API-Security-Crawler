@@ -1,0 +1,114 @@
+{
+    "Path Traversal Test on uploadPaste": {
+        "status": "Vulnerability Found",
+        "details": {
+            "vulnerability": "Path Traversal",
+            "severity": "High",
+            "description": "Test to identify if file operations allow navigation to parent directories, potentially accessing unauthorized files."
+        },
+        "query": "\n                mutation {\n                    uploadPaste(filename:\"../../../../../tmp/file.txt\", content:\"test\") {\n                        result\n                    }\n                }\n                ",
+        "response": {
+            "data": {
+                "uploadPaste": {
+                    "result": "test"
+                }
+            }
+        }
+    }
+}
+{
+    "Subscription Test": {
+        "status": "Potential Data Leakage",
+        "details": {
+            "type": "Subscription",
+            "field": "paste",
+            "query": "subscription { paste { id } }",
+            "status_code": 200
+        },
+        "query": "subscription { paste { id } }",
+        "response": {
+            "errors": [
+                {
+                    "message": "Subscription must return Async Iterable or Observable. Received: <Promise at 0x7ff1b179fdd0 fulfilled with <rx.core.anonymousobservable.AnonymousObservable object at 0x7ff1b1dcc890>>"
+                }
+            ],
+            "data": null
+        }
+    }
+}
+{
+    "Subscription Test": {
+        "status": "Potential Data Leakage",
+        "details": {
+            "type": "Subscription",
+            "field": "paste",
+            "query": "subscription { paste { id } }",
+            "status_code": 200
+        },
+        "query": "subscription { paste { id } }",
+        "response": {
+            "errors": [
+                {
+                    "message": "Subscription must return Async Iterable or Observable. Received: <Promise at 0x7ff1b0b0da10 fulfilled with <rx.core.anonymousobservable.AnonymousObservable object at 0x7ff1b0b0d350>>"
+                }
+            ],
+            "data": null
+        }
+    }
+}
+{
+    "Path Traversal Test on uploadPaste": {
+        "status": "Vulnerability Found",
+        "details": {
+            "vulnerability": "Path Traversal",
+            "severity": "High",
+            "description": "Test to identify if file operations allow navigation to parent directories, potentially accessing unauthorized files."
+        },
+        "query": "\n                mutation {\n                    uploadPaste(filename:\"../../../../../tmp/file.txt\", content:\"test\") {\n                        result\n                    }\n                }\n                ",
+        "response": {
+            "data": {
+                "uploadPaste": {
+                    "result": "test"
+                }
+            }
+        }
+    }
+}
+{
+    "Subscription Test": {
+        "status": "Potential Data Leakage",
+        "details": {
+            "type": "Subscription",
+            "field": "paste",
+            "query": "subscription { paste { id } }",
+            "status_code": 200
+        },
+        "query": "subscription { paste { id } }",
+        "response": {
+            "errors": [
+                {
+                    "message": "Subscription must return Async Iterable or Observable. Received: <Promise at 0x7ff1b1800450 fulfilled with <rx.core.anonymousobservable.AnonymousObservable object at 0x7ff1b1800bd0>>"
+                }
+            ],
+            "data": null
+        }
+    }
+}
+{
+    "Path Traversal Test on uploadPaste": {
+        "status": "Vulnerability Found",
+        "details": {
+            "vulnerability": "Path Traversal",
+            "severity": "High",
+            "description": "Test to identify if file operations allow navigation to parent directories, potentially accessing unauthorized files."
+        },
+        "query": "\n                mutation {\n                    uploadPaste(filename:\"../../../../../tmp/file.txt\", content:\"test\") {\n                        result\n                    }\n                }\n                ",
+        "response": {
+            "data": {
+                "uploadPaste": {
+                    "result": "test"
+                }
+            }
+        }
+    }
+}
