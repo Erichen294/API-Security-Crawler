@@ -106,8 +106,8 @@ class GraphQLSpider(scrapy.Spider):
                 json.dump({'url': response.url}, file)
                 file.write('\n') 
 
-    def log(self, message):
-        self.logger.info(message)
+    # def log(self, message):
+    #     self.logger.info(message)
 
 # if __name__ == "__main__":
 #     process = CrawlerProcess()
