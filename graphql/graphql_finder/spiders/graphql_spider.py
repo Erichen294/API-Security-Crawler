@@ -10,6 +10,11 @@ class GraphQLSpider(scrapy.Spider):
 
     name = 'graphql_spider'
     allowed_domains = ['localhost']
+    custom_settings = {
+        'LOG_LEVEL': 'INFO',
+        'LOG_LEVEL': 'WARNING',
+        'REQUEST_FINGERPRINTER_IMPLEMENTATION': '2.7'
+    }
 
     graphql_paths = [
         '/altair',
