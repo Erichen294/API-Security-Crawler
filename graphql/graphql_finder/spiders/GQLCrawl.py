@@ -79,7 +79,7 @@ if __name__ == "__main__":
             authorization_key = input("Enter the authorization key: ")
         schema = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
         if schema.lower() == 'y':
-            schema_table = fetch_graphql_schema(url, authorization_key)
+            schema_table = fetch_schema(url, authorization_key)
             if schema_table:
                 schema_filename = "schema.json"
                 output_image_file = "schema.png"
