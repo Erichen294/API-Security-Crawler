@@ -105,9 +105,6 @@ class GraphQLSpider(scrapy.Spider):
             with open("valid_endpoints.json", "w") as file:
                 json.dump({'url': response.url}, file)
                 file.write('\n') 
-            self.log(f"GraphQL API response saved: {response.url}")
-        else:
-            self.log(f"GraphQL endpoint does not exist")
 
     def log(self, message):
         self.logger.info(message)
