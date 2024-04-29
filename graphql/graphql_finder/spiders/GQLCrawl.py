@@ -27,6 +27,7 @@ def generate_report(url, auth_token=None):
 
     # Run tests and collect results
     results['Introspection'] = test_introspection(url, auth_token)
+    results['Generate Schema'] = generate_schema(url, auth_token)
     results['Resource Request'] = check_resource_request(url, auth_token)
     results['DoS Attack'] = test_dos_attack(url, auth_token)
     results['Alias Attack'] = test_alias_attack(url, auth_token)

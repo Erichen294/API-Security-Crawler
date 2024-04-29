@@ -369,7 +369,7 @@ def get_nested_fields(field, depth=0, max_depth=2):
         return get_nested_fields({'type': field['type']['ofType']}, depth, max_depth)
     return fields
 
-def fetch_schema(url):
+def fetch_schema(url, auth_token=None):
     """ Fetch the GraphQL schema via introspection. """
     introspection_query = {
         "query": """
@@ -400,7 +400,7 @@ def fetch_schema(url):
         """
     }
     try:
-        response = requests.post(url, json=introspection_query, headers={'Content-Type': 'application/json'})
+        response = requests.post(url, json=introspection_query, headers=get_headers(auth_token))
         response.raise_for_status()
         return response.json()['data']['__schema']['types']
     except Exception as e:
