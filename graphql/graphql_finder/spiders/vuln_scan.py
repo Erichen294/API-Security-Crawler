@@ -27,39 +27,7 @@ def get_headers(auth_token=None):
         headers['Authorization'] = f'Bearer {auth_token}'
     return headers
 
-def test_excessive_resource_requests(url, auth_token=None, schema=None, results_filename="vulnerabilities.json"):
-    """Dynamically tests for excessive resource request vulnerabilities based on schema."""
-    if not schema:
-        schema = fetch_schema(url, auth_token)
-
-    details = {
-        "vulnerability": "Excessive Resource Request",
-        "severity": "Medium",
-        "description": "Occurs when a GraphQL query allows requesting an excessive amount or depth of resources without adequate restrictions, potentially leading to performance degradation or DoS.",
-        "remediation": "Implement depth limiting, complexity analysis, and enforce pagination to prevent abuse."
-    }
-
-    vulnerability_found = False
-
-    for type_info in schema:
-        if type_info.get('fields'):
-            fields = ' '.join([field['name'] for field in type_info['fields']])
-            query = f"{{ {type_info['name']} {{ {fields} }} }}"
-            try:
-                response = requests.post(url, json={"query": query}, headers=get_headers(auth_token))
-                response_data = response.json()
-                if 'data' in response_data:
-                    save_results(details, f"Excessive Resource Test on {type_info['name']}", "Test Passed", response_data, query, results_filename)
-                    vulnerability_found = True
-            except Exception as e:
-                save_results(details, f"Excessive Resource Test on {type_info['name']}", "Error During Test", str(e), query, results_filename)
-
-    if vulnerability_found:
-        return "Excessive resource request vulnerability found."
-    else:
-        return "Excessive resource request vulnerability not found."
-
-def test_dos_attack(url, auth_token=None, results_filename="vulnerabilities.json"):
+def test_dos_attack(url, schema=None, auth_token=None, results_filename="vulnerabilities.json"):
     """Tests for Denial of Service vulnerability using repeated query submission."""
     query = "query { systemUpdate }" * 100
     details = {
@@ -116,38 +84,78 @@ def test_alias_attack(url, auth_token=None, results_filename="vulnerabilities.js
         save_results(details, "Alias-Based Attack", "Test Failed", str(e), query, results_filename)
         return "Alias-based attack test failed."
 
-def test_deep_recursion_attack(url, auth_token=None, results_filename="vulnerabilities.json"):
-    """Tests the server's ability to handle deeply nested queries."""
+def construct_nested_query(field, schema, depth=100, used_types=None):
+    if used_types is None:
+        used_types = set()
+
+    if depth <= 0 or field['name'] in used_types:
+        return field['name']
+
+    used_types.add(field['name']) 
+
+    nested_query = f"{field['name']} "
+
+    # Safely access nested properties
+    field_type = field.get('type', {})
+    of_type = field_type.get('ofType', {})
+
+    # Check if ofType has fields and they are not None
+    if of_type and 'fields' in of_type and of_type['fields'] is not None:
+        for subfield in of_type['fields']:
+            if subfield.get('type', {}).get('kind') == 'OBJECT' and subfield['name'] not in used_types:
+                # Recursively call to construct deeper query parts
+                nested_query += construct_nested_query(subfield, schema, depth - 1, used_types)
+    return nested_query
+
+def construct_deeply_nested_pair_query(field1, field2, depth):
+    """Constructs a deeply nested query by alternating between two fields."""
+    query = ""
+    current_field = field1
+
+    for _ in range(depth):
+        if current_field == field1:
+            query = f"{field1} {{ {query} {field2} {{"
+            current_field = field2
+        else:
+            query = f"{field2} {{ {query} {field1} {{"
+            current_field = field1
+
+    # Close all opened braces
+    query += " }" * (depth * 2)  # Each iteration opens two braces
+    return f"query {{ {query} }}"
+
+def test_deep_recursion_attack(url,schema=None, auth_token=None, results_filename="vulnerabilities.json"):
     schema = fetch_schema(url, auth_token)
+    if not schema:
+        print("Failed to fetch schema or schema is empty.")
+        return "Failed to fetch schema or schema is empty."
+
     details = {
         "vulnerability": "Deep Recursion Query",
         "severity": "Medium",
-        "description": "Evaluates how the server copes with a deeply nested query, which could impact performance or lead to stack overflows.",
-        "remediation": "Implement depth limiting on GraphQL queries to prevent deep recursion."
+        "description": "Tests server's ability to handle deeply nested and interconnected queries.",
+        "remediation": "Implement depth limiting on GraphQL queries."
     }
     test_results = []
-
+    test_list = []
     for type_info in schema:
-        if type_info.get('fields'):
-            # Construct a deeply nested query
-            nested_query = " ".join([f"{field['name']} {{ {field['name']} }}" for field in type_info['fields'] if field.get('type').get('fields')])
-            query = f"{{ {type_info['name']} {{ {nested_query} }} }}"
-            try:
-                response = requests.post(url, json={"query": query}, headers=get_headers(auth_token))
-                if response.status_code == 200:
-                    test_results.append(f"Potential deep recursion vulnerability found in {type_info['name']}.")
-                    save_results(details, f"Deep Recursion Test on {type_info['name']}", "Vulnerability Found", response.json(), query, results_filename)
-                else:
-                    test_results.append(f"No vulnerability found in {type_info['name']}.")
-                    save_results(details, f"Deep Recursion Test on {type_info['name']}", "No Vulnerability Found", response.json(), query, results_filename)
-            except Exception as e:
-                test_results.append(f"Error testing {type_info['name']}: {str(e)}")
-                save_results(details, f"Deep Recursion Test on {type_info['name']}", "Error During Test", str(e), query, results_filename)
-    return "Potential vulnerability found" if any("Vulnerability Found" in result for result in test_results) else "No vulnerabilities found"
+        if 'fields' in type_info and type_info['fields']:
+            for field in type_info['fields']:
+                if field.get('type', {}).get('kind') == 'OBJECT':
+                    test_list.append(construct_nested_query(field, schema, 10))
+                    if (len(test_list) > 1):
+                        query = construct_deeply_nested_pair_query(test_list[0],test_list[1], 10)
+                        response = requests.post(url, json={"query": query}, headers=get_headers(auth_token))
+                        if response.status_code != 200 or 'errors' in response.json():
+                            test_results.append("Vulnerability Found")
+                            save_results(details, f"Deep Recursion Test on {type_info['name']}", "Vulnerability Found", response.json(), query, results_filename)
+                        test_list = []
+    return "Vulnerability Found" if "Vulnerability Found" in test_results else "No vulnerabilities found"
 
-def test_ssrf_vulnerability(url, auth_token=None, results_filename="vulnerabilities.json"):
-    """Tests for SSRF vulnerability."""
-    schema = fetch_schema(url, auth_token)
+
+
+def test_ssrf_vulnerability(url, schema=None,auth_token=None, results_filename="vulnerabilities.json"):
+    schema = fetch_schema_deeper(url, auth_token)
     details = {
         "vulnerability": "Server-Side Request Forgery (SSRF)",
         "severity": "High",
@@ -157,25 +165,25 @@ def test_ssrf_vulnerability(url, auth_token=None, results_filename="vulnerabilit
     test_results = []
 
     for type_info in schema:
-        if type_info.get('fields'):
-            # Attempt to use a field to trigger an external request
-            query = f"{{ {type_info['name']} {{ " + ' '.join(f"url" if f"name" == 'url' else f"{field['name']}" for field in type_info['fields']) + " }} }}"
-            try:
-                response = requests.post(url, json={"query": query}, headers=get_headers(auth_token))
-                if response.status_code == 200:
-                    test_results.append(f"Potential SSRF vulnerability found in {type_info['name']}.")
-                    save_results(details, f"SSRF Vulnerability Test on {type_info['name']}", "Vulnerability Found", response.json(), query, results_filename)
-                else:
-                    test_results.append(f"No SSRF vulnerability found in {type_info['name']}.")
-                    save_results(details, f"SSRF Vulnerability Test on {type_info['name']}", "No Vulnerability Found", response.json(), query, results_filename)
-            except Exception as e:
-                test_results.append(f"Error testing {type_info['name']}: {str(e)}")
-                save_results(details, f"SSRF Vulnerability Test on {type_info['name']}", "Error During Test", str(e), query, results_filename)
+        if 'fields' in type_info:
+            for field in type_info['fields']:
+                if 'url' in field['name'].lower():  # Improved check for field names containing 'url'
+                    query = f"{{ {type_info['name']} {{ {field['name']} }} }}"
+                    try:
+                        response = requests.post(url, json={"query": query}, headers=get_headers(auth_token))
+                        if response.status_code == 200:
+                            test_results.append(f"Potential SSRF vulnerability found in {type_info['name']}.")
+                            save_results(details, f"SSRF Vulnerability Test on {type_info['name']}", "Vulnerability Found", response.json(), query, results_filename)
+                        else:
+                            save_results(details, f"SSRF Vulnerability Test on {type_info['name']}", "No Vulnerability Found", response.json(), query, results_filename)
+                    except Exception as e:
+                        save_results(details, f"SSRF Vulnerability Test on {type_info['name']}", "Error During Test", str(e), query, results_filename)
+
     return "Potential vulnerability found" if any("Vulnerability Found" in result for result in test_results) else "No vulnerabilities found"
 
 def test_sql_injection(url, auth_token=None, schema=None, results_filename="vulnerabilities.json"):
     if not schema:
-        schema = fetch_schema(url, auth_token)
+        schema = fetch_schema_deeper(url, auth_token)
     if not schema:
         return "Failed to fetch schema or no schema available."
 
@@ -188,33 +196,62 @@ def test_sql_injection(url, auth_token=None, schema=None, results_filename="vuln
 
     vulnerabilities_found = False
 
-    for field in schema:
-        if any(arg['type']['name'] == 'String' for arg in field.get('args', [])): 
-            for arg in field['args']:
-                injection_query = {
-                    "query": f"""
-                    query {{
-                        {field['name']}({arg['name']}:"' OR ''='") {{
-                            {arg['name']}
-                        }}
-                    }}
-                    """
-                }
-                try:
-                    response = requests.post(url, json=injection_query, headers=get_headers(auth_token))
-                    response_json = response.json()
-                    if response.status_code == 200 and 'errors' not in response_json:
-                        save_results(details, f"SQL Injection Test on {field['name']} using {arg['name']}", "Vulnerability Found", response.status_code, injection_query["query"], results_filename)
-                        vulnerabilities_found = True
-                    else:
-                        save_results(details, f"SQL Injection Test on {field['name']} using {arg['name']}", "No Vulnerability Found", response.status_code, injection_query["query"], results_filename)
-                except Exception as e:
-                    save_results(details, f"SQL Injection Test on {field['name']} using {arg['name']}", "Error During Test", str(e), injection_query["query"], results_filename)
+    for type_info in schema:
+        if 'fields' in type_info:
+            for field in type_info['fields']:
+                if any(arg['type']['name'] == 'String' for arg in field.get('args', [])):
+                    for arg in field['args']:
+                        if arg['type']['name'] == 'String':  # Ensuring the argument is of type String
+                            injection_query = {
+                                "query": f"""
+                                query {{
+                                    {field['name']}({arg['name']}:"' OR ''='") {{
+                                        {arg['name']}
+                                    }}
+                                }}
+                                """
+                            }
+                            try:
+                                response = requests.post(url, json=injection_query, headers=get_headers(auth_token))
+                                response_json = response.json()
+                                if response.status_code == 200 and 'errors' not in response_json:
+                                    save_results(details, f"SQL Injection Test on {field['name']} using {arg['name']}", "Vulnerability Found", response.status_code, injection_query["query"], results_filename)
+                                    vulnerabilities_found = True
+                                else:
+                                    save_results(details, f"SQL Injection Test on {field['name']} using {arg['name']}", "No Vulnerability Found", response.status_code, injection_query["query"], results_filename)
+                            except Exception as e:
+                                save_results(details, f"SQL Injection Test on {field['name']} using {arg['name']}", "Error During Test", str(e), injection_query["query"], results_filename)
 
     return "SQL injection vulnerabilities found." if vulnerabilities_found else "No SQL injection vulnerabilities found."
 
 
-def test_path_traversal(url, auth_token=None, results_filename="vulnerabilities.json"):
+def test_sql_injections(url, auth_token, schema, results_filename='vulnerabilities.json'):
+    """Tests for SQL Injection vulnerabilities specifically targeting the 'pasts' field with a 'filter' argument."""
+    injection_query=schema
+    
+    headers = get_headers(auth_token)
+    response = requests.post(url, json=injection_query, headers=headers)
+    response_json = response.json()
+
+    details = {
+        "vulnerability": "SQL Injection",
+        "severity": "High",
+        "description": "Attempts to exploit SQL injection vulnerabilities by injecting malicious SQL code through GraphQL queries.",
+        "remediation": "Use parameterized queries or prepared statements to handle user input."
+    }
+
+    if response.status_code == 200 and 'errors' in response_json:
+        # If errors are present in the response, it might indicate an SQL injection vulnerability
+        save_results(details, "SQL Injection Test on 'pastes' field", "Vulnerability Found", response_json, injection_query['query'], results_filename)
+        return "SQL injection vulnerability found."
+    elif response.status_code != 200:
+        save_results(details, "SQL Injection Test on 'pastes' field", "No Vulnerability Found (HTTP Error)", response_json, injection_query['query'], results_filename)
+        return "Potential vulnerability, HTTP error occurred."
+    else:
+        save_results(details, "SQL Injection Test on 'pastes' field", "No Vulnerability Found", response_json, injection_query['query'], results_filename)
+        return "No SQL injection vulnerabilities found."
+    
+def test_path_traversal(url,schema=None, auth_token=None, results_filename="vulnerabilities.json"):
     schema = fetch_schema_deeper(url, auth_token)
     if not schema:
         return "Failed to fetch schema or no schema available."
@@ -244,10 +281,7 @@ def test_path_traversal(url, auth_token=None, results_filename="vulnerabilities.
                 if response.status_code == 200 and 'data' in response.json() and response.json()['data'].get(field['name'], {}).get('result'):
                     vulnerable.append(f"{field['name']} is vulnerable to path traversal.")
                     save_results(details, f"Path Traversal Test on {field['name']}", "Vulnerability Found", response.json(), path_traversal_query['query'], results_filename)
-                else:
-                    save_results(details, f"Path Traversal Test on {field['name']}", "No Vulnerability Found", response.json(), path_traversal_query['query'], results_filename)
             except Exception as e:
-                vulnerable.append(f"Error testing {field['name']}: {str(e)}")
                 save_results(details, f"Path Traversal Test on {field['name']}", "Error During Test", str(e), path_traversal_query['query'], results_filename)
 
     if vulnerable:
@@ -255,7 +289,7 @@ def test_path_traversal(url, auth_token=None, results_filename="vulnerabilities.
     else:
         return "No path traversal vulnerabilities found."
 
-def test_permissions(url, auth_token=None, schema=None, results_filename="vulnerabilities.json"):
+def test_permissions(url,schema=None, auth_token=None, results_filename="vulnerabilities.json"):
     """Tests for authorization vulnerabilities by dynamically testing mutations based on schema introspection."""
     if not schema:
         schema = fetch_schema(url, auth_token)
@@ -326,7 +360,7 @@ def test_getUsers(url, auth_token=None, filename="vulnerabilities.json"):
         save_results(details, "Get Users Test", "Test Not Applicable", str(e), getUsers_query['query'], filename)
         return f"Get users test not applicable."
     
-def test_unauthorized_comment(url, auth_token=None):
+def test_unauthorized_comment(url, schema=None, auth_token=None):
     comment_query = {
         "query": """
             mutation {
@@ -351,47 +385,40 @@ def test_unauthorized_comment(url, auth_token=None):
         return f"An error occurred while testing unauthorized comment: {str(e)}"
     
 
-
-def test_batching_attack(url, auth_token=None, results_filename="vulnerabilities.json"):
-    schema = fetch_schema(url, auth_token)
-    if not schema:
-        return "Failed to fetch schema or no schema available."
-
-    details = {
-        "vulnerability": "Batching Attack",
-        "severity": "Medium",
-        "description": "Test to identify if the API allows batching of queries which can be exploited to perform unauthorized operations or data retrieval."
-    }
-
-    # Prepare batch queries based on the schema
-    batch_queries = []
-    for field in schema:
-        if 'type' in field and 'fields' in field['type']:
-            subfields = ', '.join(sub['name'] for sub in field['type']['fields'])
-            if subfields:  # Ensure there are subfields to construct a meaningful query
-                query = f"{{ {field['name']} {{ {subfields} }} }}"
-                batch_queries.append({'query': query})
-
-    if not batch_queries:
-        save_results(details, "Batching Attack Test", "No Suitable Fields for Batch Query", {}, "", results_filename)
-        return "No suitable fields found for batching attack test."
-
-    # Execute batch queries
+def test_batching_attack(url, schema=None,auth_token=None, results_filename="vulnerabilities.json"):
+    system_update_query = "query { systemUpdate }"
+    queries = [system_update_query] * 1
+    payload = json.dumps(queries)
     headers = get_headers(auth_token)
+    
     try:
-        response = requests.post(url, json=batch_queries, headers=headers)
-        if response.status_code == 200 and "errors" not in response.json():
-            save_results(details, "Batching Attack Test", "Vulnerability Found", response.json(), str(batch_queries), results_filename)
-            return "Batching attack vulnerability found."
+        response = requests.post(url, data=payload, headers=headers)
+        if response.status_code != 200:
+            # Log unexpected status codes
+            error_details = {
+                "status": response.status_code,
+                "response": response.text
+            }
+            save_results("Error response from server", "Batching Attack Test", "HTTP Error", error_details, payload, results_filename)
+            return f"HTTP error occurred: {response.status_code}"
+        
+        # Try to decode JSON only if response is 200
+        response_json = response.json()
+        if all('errors' not in resp for resp in response_json):
+            save_results("Server handled batching well", "Batching Attack Test", "No Vulnerability Found", response_json, payload, results_filename)
+            return "No vulnerabilities found, server handled batching well."
         else:
-            save_results(details, "Batching Attack Test", "No Vulnerability Found", response.json(), str(batch_queries), results_filename)
-            return "Batching attack vulnerability not found."
+            save_results("Batching attack vulnerability found", "Batching Attack Test", "Vulnerability Found", response_json, payload, results_filename)
+            return "Batching attack vulnerability found."
+    except json.JSONDecodeError:
+        save_results("Failed to decode JSON response", "Batching Attack Test", "JSON Decode Error", {"raw_response": response.text}, payload, results_filename)
+        return "Failed to decode JSON from response."
     except Exception as e:
-        save_results(details, "Batching Attack Test", "Test Failed", str(e), str(batch_queries), results_filename)
-        return f"Batching attack test failed: {str(e)}"
+        save_results(str(e), "Batching Attack Test", "Error During Test", {"exception": str(e)}, payload, results_filename)
+        return f"An error occurred: {str(e)}"
 
 
-def test_unauthorized_mutation(url, auth_token=None):
+def test_unauthorized_mutation(url, schema=None,auth_token=None):
     mutation_query = 'mutation { updatePost(id: "1", data: { title: "New Title" }) { title } }'
     try:
         response = requests.post(url, json={"query": mutation_query}, headers=get_headers(auth_token))
@@ -542,7 +569,7 @@ def test_dynamic_subscription(url, schema, auth_token=None, results_filename="vu
     return "Vulnerability Found" if "Vulnerability Found" in findings else "No vulnerabilities found"
 
 
-def test_denialOfService(url, auth_token=None):
+def test_denialOfService(url, schema=None, auth_token=None):
     # 100 for both correctly tests DVGA without completely crashing
     # 10000 and 1000 correctly tests WP
     # 10000 and 1000 correctly tests Saleor

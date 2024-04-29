@@ -30,29 +30,27 @@ def generate_report(url, auth_token=None):
     # Run dynamic tests if successful 
     if schema:
         results['Generate Schema'] = "Schema successfully fetched."
-        results['Sensitive Data Dynamic Tests'] = test_sensitive_data_dynamically(url, schema, auth_token)
-        results['Field Accessibility Tests'] = test_dynamic_field_accessibility(url, schema, auth_token)
-        results['Mutation Tests'] = test_dynamic_mutation(url, schema, auth_token)
-        results['Subscription Tests'] = test_dynamic_subscription(url, schema, auth_token)
-    #     results['Resource Request'] = test_excessive_resource_requests(url, auth_token)
-    #     results['DoS Attack'] = test_dos_attack(url, auth_token)
-    #     results['Deep Recursion'] = test_deep_recursion_attack(url, auth_token)
-    #     results['SSRF Vulnerability'] = test_ssrf_vulnerability(url, auth_token)
-    #     results['SQL Injection'] = test_sql_injection(url, auth_token)
-        results['Path Traversal'] = test_path_traversal(url, auth_token)
+        results['Sensitive Data Dynamic Tests'] = test_sensitive_data_dynamically(url, schema, auth_token, results_filename)
+        results['Field Accessibility Tests'] = test_dynamic_field_accessibility(url, schema, auth_token, results_filename )
+        results['Mutation Tests'] = test_dynamic_mutation(url, schema, auth_token, results_filename)
+        results['Subscription Tests'] = test_dynamic_subscription(url, schema, auth_token, results_filename)
+        results['Path Traversal'] = test_path_traversal(url, schema, auth_token, results_filename)
+        results['DoS Attack'] = test_dos_attack(url, schema, auth_token, results_filename)
+        # results['Deep Recursion'] = test_deep_recursion_attack(url, schema, auth_token, results_filename)
+        results['SSRF Vulnerability'] = test_ssrf_vulnerability(url, schema, auth_token, results_filename)
+        results['SQL Injection'] = test_sql_injections(url, auth_token, file_schema, results_filename)
+        results['Permissions'] = test_permissions(url, schema, auth_token, results_filename)
+        results['Get Users'] = test_getUsers(url, auth_token, results_filename)
+        results['Unauthorized Comment'] = test_unauthorized_comment(url, schema, auth_token)
+        # results['Batching Attack'] = test_batching_attack(url, schema, auth_token)
+        results['Unauthorized Mutation'] = test_unauthorized_mutation(url, schema, auth_token)
+        results['Denial of Service'] = test_denialOfService(url, schema, auth_token)
+        # results['Alias Attack'] = test_alias_attack(url, auth_token)
 
-    # else:
-    #     results['Generate Schema'] = "Failed to fetch schema."    
-    # # Static test cases 
+    else:
+        results['Generate Schema'] = "Failed to fetch schema."    
    
-    # # results['Alias Attack'] = test_alias_attack(url, auth_token)
-    # results['Permissions'] = test_permissions(url, auth_token)
-    # results['Get Users'] = test_getUsers(url, auth_token)
-    # results['Unauthorized Comment'] = test_unauthorized_comment(url, auth_token)
-    # results['Batching Attack'] = test_batching_attack(url, auth_token)
-    # # results['Field Limiting'] = test_field_limiting(url, auth_token)
-    # # results['Unauthorized Mutation'] = test_unauthorized_mutation(url, auth_token)
-    # results['Denial of Service'] = test_denialOfService(url, auth_token)
+   
     return results
 
 def print_report(results):
@@ -67,33 +65,43 @@ def load_endpoints(filename):
     with open(filename, "r") as file:
         for line in file:
             yield json.loads(line)['url']
-
-
+file_schema=  {
+        "query": '''
+        query {
+            pastes(filter: "one two three'") {
+                title
+                content
+                public
+            }
+        }
+        '''
+    }
+results_filename = "vulnerabilities.json"
 if __name__ == "__main__":
     print_banner()
-    # choice = input("Do you want to enter an endpoint manually or crawl through the web application? Enter 'manual' or 'crawl': ").strip().lower()
+    choice = input("Do you want to enter an endpoint manually or crawl through the web application? Enter 'manual' or 'crawl': ").strip().lower()
     choice = "manual"
     if choice == 'manual':
-        # url = input("Enter the GraphQL endpoint URL: ")
+        url = input("Enter the GraphQL endpoint URL: ")
         authorization_key = None
-        GRAPHQL_URL = "http://localhost:5013/graphql"
-        # authorization = input("Does your application need authorization? Enter 'Y' or 'N': ")
-        # authorization_key = None
-        # if authorization.lower() == 'y' :
-        #     authorization_key = input("Enter the authorization key: ")
-        # schema = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
-        # if schema.lower() == 'y':
-        #     schema_table = fetch_graphql_schema(url, authorization_key)
-        #     if schema_table:
-        #         schema_filename = "schema.json"
-        #         output_image_file = "schema.png"
-        #         save_schema_to_file(schema_table, schema_filename)
-        #         execute_graphqlviz(schema_filename, output_image_file)
-        # else:
-        #     print("GraphQL schema not fetched or failed to fetch.")
-        # custom_filename = input("Enter a custom filename for saving the test results (leave blank to use default): ").strip()
-        # if custom_filename:
-        #     RESULTS_FILENAME = custom_filename 
+        GRAPHQL_URL = url
+        authorization = input("Does your application need authorization? Enter 'Y' or 'N': ")
+        authorization_key = None
+        if authorization.lower() == 'y' :
+            authorization_key = input("Enter the authorization key: ")
+        schema = input("Do you want to generate a schema visualization (if introspection is enabled)? Enter 'Y' or 'N': ")
+        if schema.lower() == 'y':
+            schema_table = fetch_graphql_schema(url, authorization_key)
+            if schema_table:
+                schema_filename = "schema.json"
+                output_image_file = "schema.png"
+                save_schema_to_file(schema_table, schema_filename)
+                execute_graphqlviz(schema_filename, output_image_file)
+        else:
+            print("GraphQL schema not fetched or failed to fetch.")
+        custom_filename = input("Enter a custom filename for saving the test results (leave blank to use default): ").strip()
+        if custom_filename:
+            results_filename = custom_filename 
         report_results = generate_report(GRAPHQL_URL, authorization_key)
         print_report(report_results)
     elif choice == 'crawl':
@@ -123,6 +131,8 @@ if __name__ == "__main__":
                 print("GraphQL schema not fetched or failed to fetch.")
             custom_filename = input("Enter a custom filename for saving the test results (leave blank to use default): ").strip()
             if custom_filename:
-                RESULTS_FILENAME = custom_filename 
+                results_filename = custom_filename 
             report_results = generate_report(GRAPHQL_URL, authorization_key)
             print_report(report_results)
+
+        

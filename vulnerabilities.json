@@ -1,114 +1,65 @@
 {
-    "Path Traversal Test on uploadPaste": {
+    "DoS Attack": {
         "status": "Vulnerability Found",
         "details": {
-            "vulnerability": "Path Traversal",
+            "vulnerability": "Denial of Service (DoS)",
             "severity": "High",
-            "description": "Test to identify if file operations allow navigation to parent directories, potentially accessing unauthorized files."
+            "description": "This test floods the server with repeated requests to check if the server can handle high load without service degradation or crash.",
+            "remediation": "Implement rate limiting, use a robust load balancer, and consider auto-scaling."
         },
-        "query": "\n                mutation {\n                    uploadPaste(filename:\"../../../../../tmp/file.txt\", content:\"test\") {\n                        result\n                    }\n                }\n                ",
+        "query": "query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }query { systemUpdate }",
         "response": {
-            "data": {
-                "uploadPaste": {
-                    "result": "test"
+            "400": 100
+        }
+    }
+}
+{
+    "SQL Injection Test on 'pastes' field": {
+        "status": "No Vulnerability Found (HTTP Error)",
+        "details": {
+            "vulnerability": "SQL Injection",
+            "severity": "High",
+            "description": "Attempts to exploit SQL injection vulnerabilities by injecting malicious SQL code through GraphQL queries.",
+            "remediation": "Use parameterized queries or prepared statements to handle user input."
+        },
+        "query": "\n        query {\n            pastes(filter: \"one two three'\") {\n                title\n                content\n                public\n            }\n        }\n        ",
+        "response": {
+            "errors": [
+                {
+                    "message": "Cannot query field \"pastes\" on type \"Query\". Did you mean \"pages\", \"page\", \"sales\" or \"payments\"?",
+                    "locations": [
+                        {
+                            "line": 3,
+                            "column": 13
+                        }
+                    ],
+                    "extensions": {
+                        "exception": {
+                            "code": "GraphQLError",
+                            "stacktrace": [
+                                "graphql.error.base.GraphQLError: Cannot query field \"pastes\" on type \"Query\". Did you mean \"pages\", \"page\", \"sales\" or \"payments\"?"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "extensions": {
+                "cost": {
+                    "requestedQueryCost": 0,
+                    "maximumAvailable": 50000
                 }
             }
         }
     }
 }
 {
-    "Subscription Test": {
-        "status": "Potential Data Leakage",
+    "Get Users Test": {
+        "status": "Test Not Applicable",
         "details": {
-            "type": "Subscription",
-            "field": "paste",
-            "query": "subscription { paste { id } }",
-            "status_code": 200
+            "description": "Tests if user data for administrators can be fetched without proper authorization.",
+            "severity": "High"
         },
-        "query": "subscription { paste { id } }",
-        "response": {
-            "errors": [
-                {
-                    "message": "Subscription must return Async Iterable or Observable. Received: <Promise at 0x7ff1b179fdd0 fulfilled with <rx.core.anonymousobservable.AnonymousObservable object at 0x7ff1b1dcc890>>"
-                }
-            ],
-            "data": null
-        }
-    }
-}
-{
-    "Subscription Test": {
-        "status": "Potential Data Leakage",
-        "details": {
-            "type": "Subscription",
-            "field": "paste",
-            "query": "subscription { paste { id } }",
-            "status_code": 200
-        },
-        "query": "subscription { paste { id } }",
-        "response": {
-            "errors": [
-                {
-                    "message": "Subscription must return Async Iterable or Observable. Received: <Promise at 0x7ff1b0b0da10 fulfilled with <rx.core.anonymousobservable.AnonymousObservable object at 0x7ff1b0b0d350>>"
-                }
-            ],
-            "data": null
-        }
-    }
-}
-{
-    "Path Traversal Test on uploadPaste": {
-        "status": "Vulnerability Found",
-        "details": {
-            "vulnerability": "Path Traversal",
-            "severity": "High",
-            "description": "Test to identify if file operations allow navigation to parent directories, potentially accessing unauthorized files."
-        },
-        "query": "\n                mutation {\n                    uploadPaste(filename:\"../../../../../tmp/file.txt\", content:\"test\") {\n                        result\n                    }\n                }\n                ",
-        "response": {
-            "data": {
-                "uploadPaste": {
-                    "result": "test"
-                }
-            }
-        }
-    }
-}
-{
-    "Subscription Test": {
-        "status": "Potential Data Leakage",
-        "details": {
-            "type": "Subscription",
-            "field": "paste",
-            "query": "subscription { paste { id } }",
-            "status_code": 200
-        },
-        "query": "subscription { paste { id } }",
-        "response": {
-            "errors": [
-                {
-                    "message": "Subscription must return Async Iterable or Observable. Received: <Promise at 0x7ff1b1800450 fulfilled with <rx.core.anonymousobservable.AnonymousObservable object at 0x7ff1b1800bd0>>"
-                }
-            ],
-            "data": null
-        }
-    }
-}
-{
-    "Path Traversal Test on uploadPaste": {
-        "status": "Vulnerability Found",
-        "details": {
-            "vulnerability": "Path Traversal",
-            "severity": "High",
-            "description": "Test to identify if file operations allow navigation to parent directories, potentially accessing unauthorized files."
-        },
-        "query": "\n                mutation {\n                    uploadPaste(filename:\"../../../../../tmp/file.txt\", content:\"test\") {\n                        result\n                    }\n                }\n                ",
-        "response": {
-            "data": {
-                "uploadPaste": {
-                    "result": "test"
-                }
-            }
-        }
+        "query": "\n        query getUsers {\n          users(where: {role: ADMINISTRATOR}) {\n            edges {\n              node {\n                userId\n                name\n              }\n            }\n          }\n        }\n        ",
+        "response": "400 Client Error: Bad Request for url: http://localhost:8000/graphql/"
     }
 }
