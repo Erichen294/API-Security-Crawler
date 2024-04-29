@@ -103,6 +103,8 @@ if __name__ == "__main__":
         process.crawl(GraphQLSpider, start_urls=[starting_url], authorization=authorization, authorization_key=authorization_key )
         process.start()
         for url in load_endpoints("./valid_endpoints.json"):
+            print('/n')
+            print("\033[94mGraphQL endpoint: \033[0m", url)
             GRAPHQL_URL = url
             report_results = generate_report(GRAPHQL_URL, authorization_key)
             print_report(report_results)
