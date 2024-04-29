@@ -16,5 +16,5 @@ GraphQL is a query language for APIs that allows clients to request only the dat
   - pip install scrapy 
 
 **To run GraphQL vulnerability scanner once installation is finished:**
-- cd .\graphql\graphql_finder\graphql_finder\spiders\
+- cd .\graphql\graphql_finder\spiders\
 - python GQLCrawl.py
