@@ -22,7 +22,7 @@ def print_banner():
     print("This tool tests various GraphQL security vulnerabilities on specified endpoints.\n")
 
 
-def generate_report(url, auth_token=None, results_filename=None):
+def generate_report(url, auth_token=None, results_filename='vulnerabilities.json'):
     results = {}
 
     # Run tests and collect results
@@ -42,10 +42,10 @@ def generate_report(url, auth_token=None, results_filename=None):
         results['Permissions'] = test_permissions(url, schema, auth_token, results_filename)
         results['Get Users'] = test_getUsers(url, auth_token, results_filename)
         results['Unauthorized Comment'] = test_unauthorized_comment(url, schema, auth_token)
-        # results['Batching Attack'] = test_batching_attack(url, schema, auth_token)
+        results['Batching Attack'] = test_batching_attack(url, schema, auth_token)
         results['Unauthorized Mutation'] = test_unauthorized_mutation(url, schema, auth_token)
         results['Denial of Service'] = test_denialOfService(url, schema, auth_token)
-        # results['Alias Attack'] = test_alias_attack(url, auth_token)
+        results['Alias Attack'] = test_alias_attack(url, auth_token)
 
     else:
         results['Generate Schema'] = "Failed to fetch schema."    
